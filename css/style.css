@@ -28,7 +28,7 @@ body {
   font-family: var(--font-serif);
   color: var(--ink);
   overflow: hidden;
-  background: #b99a6b;
+  background: linear-gradient(180deg, #e9dcc2, #ddc9a4);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -50,6 +50,13 @@ body {
   will-change: transform;
   user-select: none;
   -webkit-user-drag: none;
+  /* 默认接近透明：以虹桥与诗帘为主角；「展画卷」模式下恢复全幅 */
+  opacity: 0.16;
+  transition: opacity 0.9s ease;
+}
+
+body[data-mode="painting"] #bgImg {
+  opacity: 1;
 }
 
 .stage {
@@ -154,8 +161,8 @@ body {
   transform: translate(-50%, -50%);
   background: radial-gradient(
     ellipse at center,
-    rgba(40, 28, 16, 0.34) 0%,
-    rgba(40, 28, 16, 0.2) 42%,
+    rgba(40, 28, 16, 0.14) 0%,
+    rgba(40, 28, 16, 0.07) 42%,
     transparent 72%
   );
   z-index: -1;
@@ -609,6 +616,60 @@ input[type="range"]::-moz-range-thumb {
   background: var(--brown);
   color: var(--cream);
   font-size: 13px;
+}
+
+/* ─── 展画卷 / 回诗帘 模式切换 ─── */
+.area,
+.bottom-copy,
+.scroll-hint {
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease;
+}
+
+body[data-mode="painting"] .area {
+  opacity: 0;
+  transform: translateY(-28px);
+  pointer-events: none;
+}
+
+body[data-mode="painting"] .bottom-copy,
+body[data-mode="painting"] .scroll-hint {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.view-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 45;
+  background-color: var(--brown);
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.055) 0 2px,
+    transparent 2px 6px
+  );
+  color: var(--cream);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  padding: 9px 18px;
+  border: 1px solid #3a2c26;
+  border-radius: 4px;
+  box-shadow:
+    0 8px 22px rgba(40, 28, 20, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.view-btn:hover {
+  background-color: var(--brown-2);
+}
+
+.view-btn[aria-pressed="true"] {
+  background-color: #3a2c26;
 }
 
 /* ─── 移动端 ─── */

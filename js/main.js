@@ -356,6 +356,10 @@ class Input {
     };
   }
   pointerdown(e) {
+    if (inputLocked()) {
+      this.pointerup(e);
+      return;
+    }
     if (isUiEvent(e)) return;
     const { x, y } = this.localPoint(e);
     this.mousePos.reset(x, y);
@@ -384,6 +388,10 @@ class Input {
     }
   }
   pointermove(e) {
+    if (inputLocked()) {
+      this.pointerup(e);
+      return;
+    }
     if (isUiEvent(e) && !this.grabbedParticle) return;
     const { x, y } = this.localPoint(e);
     this.mousePos.reset(x, y);
@@ -447,6 +455,11 @@ class Input {
 /* ─── 背景横展：滚轮驱动 t∈[0,1]，0=最右端（春郊起幅），1=最左端（虹桥） ─── */
 let panTarget = 0;
 let panCur = 0;
+let paintingMode = false;
+
+function inputLocked() {
+  return paintingMode;
+}
 let bgW = 0;
 let vw = window.innerWidth;
 
@@ -538,6 +551,22 @@ panelBtn.addEventListener("click", () => {
   panelApi.setPanelOpen(open);
   panelBtn.setAttribute("aria-expanded", String(open));
 });
+
+/* ─── 展画卷 / 回诗帘 ─── */
+const viewBtn = document.getElementById("viewBtn");
+const scrollHint = document.querySelector(".scroll-hint");
+function setPainting(on) {
+  paintingMode = on;
+  document.body.dataset.mode = on ? "painting" : "poem";
+  viewBtn.textContent = on ? "回诗帘" : "展画卷";
+  viewBtn.setAttribute("aria-pressed", String(on));
+  if (on) {
+    panelApi.setPanelOpen(false);
+    panelBtn.setAttribute("aria-expanded", "false");
+    if (!aboutModal.hidden) setAboutOpen(false);
+  }
+}
+viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 
 /* ─── About ─── */
 const aboutModal = document.getElementById("aboutModal");
