@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>清明 · 虹桥 — 交互式《清明上河图》</title>
+    <meta
+      name="description"
+      content="滚轮横展《清明上河图》长卷，虹桥之下悬清明诗帘；拂过诗帘，铜钟应声而起。"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%234a3a33'/%3E%3Ctext x='32' y='44' font-size='36' text-anchor='middle' fill='%23f6efe3' font-family='serif'%3E清%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600;900&family=ZCOOL+XiaoWei&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true">
+      <img id="bgImg" src="assets/qmsht-web.jpg" alt="" />
+    </div>
+
+    <div class="stage" id="stage">
+      <header class="topbar">
+        <div class="brand">
+          清明 · 虹桥
+          <span class="brand__sub">Along the River during the Qingming Festival</span>
+        </div>
+        <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
+          音律
+        </button>
+      </header>
+
+      <div class="panel-anchor" id="panelAnchor"></div>
+
+      <main class="area">
+        <div class="scene" id="scene">
+          <div class="bridge">
+            <img id="bridgeImg" src="assets/hongqiao-web.png" alt="虹桥" />
+          </div>
+          <div class="bridge-shadow" aria-hidden="true"></div>
+          <div class="strings" id="container" aria-label="清明诗帘"></div>
+        </div>
+      </main>
+
+      <div class="bottom-copy" id="bottomCopy">
+        <section class="heading" aria-label="引子">
+          <p class="eyebrow"><strong>清明</strong>（Qīngmíng）祭祖 · 踏青</p>
+          <h1 class="title" aria-label="清明——雨落汴河，虹桥撑起一城人间烟火">
+            清明——雨落汴河，<br />虹桥撑起一城人间烟火
+          </h1>
+        </section>
+        <div class="aside-block">
+          <p class="aside">滚轮横展长卷，自春郊至虹桥；鼠标拂过诗帘，铜钟应声而起。</p>
+          <button type="button" class="about-btn" id="aboutBtn" aria-expanded="false" aria-controls="aboutModal">
+            关于
+          </button>
+        </div>
+      </div>
+
+      <p class="scroll-hint" aria-hidden="true">滚轮 · 横展画卷</p>
+
+      <div class="hud" aria-hidden="true">
+        <div class="hud__track"><div class="hud__fill" id="hudFill"></div></div>
+        <div class="hud__labels"><span>郊野</span><span>汴城</span><span>虹桥</span></div>
+      </div>
+
+      <div
+        class="about"
+        id="aboutModal"
+        hidden
+        aria-hidden="true"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="aboutTitle"
+      >
+        <button type="button" class="about__backdrop" aria-label="关闭关于"></button>
+        <div class="about__panel">
+          <button type="button" class="about__close" id="aboutClose" aria-label="关闭">关闭</button>
+          <div class="about__photo">
+            <img src="assets/hongqiao-crop.png" alt="虹桥效果图" />
+          </div>
+          <div class="about__copy">
+            <h2 class="about__title" id="aboutTitle">关于这个页面</h2>
+            <div class="about__body">
+              <p>这是《清明上河图》的一次交互重演：虹桥之下悬着一幅诗帘，帘上写满清明前后的诗。</p>
+              <p>滚轮让长卷自春郊一路展开到虹桥；拂过或按住诗帘，会有铜钟声应声而起——像桥下有人轻叩船舷。</p>
+              <p class="about__credits">
+                画卷《清明上河图》· 张择端（北宋，公有领域）<br />
+                布帘物理引擎 · Liam Egan（CodePen）<br />
+                交互形式 · Marina Budarina「chimes」
+              </p>
+            </div>
+            <div class="about__links">
+              <a href="https://marinabudarina.github.io/chimes/" target="_blank" rel="noopener noreferrer"
+                >chimes 参考站</a
+              >
+              <a href="https://codepen.io/shubniggurath/pen/ZYpjorm" target="_blank" rel="noopener noreferrer"
+                >string physics</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript">本页需要启用 JavaScript 才能展开画卷。</div>
+    </noscript>
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>
