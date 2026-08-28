@@ -474,8 +474,30 @@ function sceneScale() {
   scene.style.setProperty("--s", s);
 }
 
-function panLoop() {
+/* 诗帘状态：背景自动慢移——从最右端（春郊起幅）缓慢移到最左端（汴城），
+   再移回右端，循环往复；单向约 AUTO_PAN_MS。展画卷状态归位右端并跟随用户滚动 */
+const AUTO_PAN_MS = 120000;
+let autoT = 0;
+let autoDir = 1;
+let lastPanTs = 0;
+
+function panLoop(ts) {
   requestAnimationFrame(panLoop);
+  if (lastPanTs) {
+    const dt = Math.min(64, ts - lastPanTs);
+    if (!paintingMode) {
+      autoT += (autoDir * dt) / AUTO_PAN_MS;
+      if (autoT >= 1) {
+        autoT = 1;
+        autoDir = -1;
+      } else if (autoT <= 0) {
+        autoT = 0;
+        autoDir = 1;
+      }
+      panTarget = autoT;
+    }
+  }
+  lastPanTs = ts;
   const k = reduceMotion ? 1 : 1 - Math.exp(-0.016 * 3);
   panCur += (panTarget - panCur) * k;
   if (Math.abs(panTarget - panCur) < 0.0004) panCur = panTarget;
@@ -493,6 +515,8 @@ window.addEventListener(
   "wheel",
   (e) => {
     if (isUiEvent(e)) return;
+    /* 诗帘状态背景自动慢移，滚轮仅展画卷状态手动展卷 */
+    if (!paintingMode) return;
     e.preventDefault();
     const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
     setPan(panTarget + delta * 0.00045);
@@ -501,6 +525,7 @@ window.addEventListener(
 );
 
 window.addEventListener("keydown", (e) => {
+  if (!paintingMode) return;
   if (e.key === "ArrowRight") setPan(panTarget - 0.04);
   if (e.key === "ArrowLeft") setPan(panTarget + 0.04);
 });
@@ -510,6 +535,7 @@ let touchPan = null;
 window.addEventListener("pointerdown", (e) => {
   if (e.pointerType !== "touch") return;
   if (isUiEvent(e) || e.target.closest(".strings")) return;
+  if (!paintingMode) return; // 诗帘状态背景自动慢移，横拖仅展画卷状态
   touchPan = { x: e.clientX, t: panTarget };
 });
 window.addEventListener("pointermove", (e) => {
@@ -562,15 +588,30 @@ new MutationObserver(() => {
 /* ─── 展画卷 / 回诗帘 ─── */
 const viewBtn = document.getElementById("viewBtn");
 const scrollHint = document.querySelector(".scroll-hint");
+
+/* 展画卷背景音（汴河）：进入展画卷自动播放，回诗帘暂停（保留进度，再进续播） */
+const bgm = new Audio("assets/bianhe.mp3");
+bgm.loop = true;
+bgm.volume = 0.5;
+
 function setPainting(on) {
   paintingMode = on;
   document.body.dataset.mode = on ? "painting" : "poem";
   viewBtn.textContent = on ? "回诗帘" : "展画卷";
   viewBtn.setAttribute("aria-pressed", String(on));
   if (on) {
+    /* 背景归位最右端（春郊起幅），随后随用户滚动 */
+    panTarget = 0;
+    autoT = 0;
+    autoDir = 1;
+    bgm.play().catch(() => {});
     panelApi.setPanelOpen(false);
     panelBtn.setAttribute("aria-expanded", "false");
     if (!aboutModal.hidden) setAboutOpen(false);
+  } else {
+    bgm.pause();
+    /* 回诗帘：自动慢移从当前位置接续，不跳变 */
+    autoT = panCur;
   }
 }
 viewBtn.addEventListener("click", () => setPainting(!paintingMode));
@@ -727,5 +768,6 @@ window.__qmsht = {
   get sceneId() {
     return sceneAt(sceneIdx);
   },
-  goScene
+  goScene,
+  getBgm: () => ({ playing: !bgm.paused, time: bgm.currentTime, dur: bgm.duration })
 };

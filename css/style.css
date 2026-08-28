@@ -822,6 +822,16 @@ body[data-mode="painting"] .scroll-hint {
   pointer-events: none;
 }
 
+/* 展画卷状态：隐藏左上标题与左右切换钮（音律按钮保留） */
+body[data-mode="painting"] .brand,
+body[data-mode="painting"] .nav-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+.brand {
+  transition: opacity 0.5s ease;
+}
+
 /* 桥/船切换时：文案只随场景轻降透明度，位置不动 */
 .bottom-copy.is-dipping {
   opacity: 0.25;
