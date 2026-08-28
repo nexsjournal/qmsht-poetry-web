@@ -2,6 +2,7 @@ import { smoothstep, getPointID, charForCell } from "./utils.js";
 import { clothText } from "./poems.js";
 import { chimes } from "./chimes.js";
 import { buildPanel } from "./panel.js";
+import { initPedestrians } from "./pedestrians.js";
 
 /* ─── 参数（默认值对齐参考站面板截图） ─── */
 const CONFIG = {
@@ -19,7 +20,14 @@ const CONFIG = {
   contain: false,
   chimes: true,
   chimeVolume: 0.28,
-  collection: "all"
+  collection: "all",
+  /* 过桥行人 */
+  pedCount: 3,
+  pedDuration: 10,
+  pedFadeIn: 1.2,
+  pedFadeOut: 0.9,
+  pedGapMin: 1,
+  pedGapMax: 4
 };
 
 /* ─── 场景几何 ─── */
@@ -38,6 +46,7 @@ const hudFill = document.getElementById("hudFill");
 let rafID = 0;
 let input = null;
 let constraintsArr = [];
+let pedestrians = null;
 
 function isUiEvent(e) {
   return !!(
@@ -565,6 +574,8 @@ function setPainting(on) {
     panelBtn.setAttribute("aria-expanded", "false");
     if (!aboutModal.hidden) setAboutOpen(false);
   }
+  /* 行人：展画卷整体淡出并冻结，回诗帘原样恢复（不重置 t，无跳变） */
+  if (pedestrians) (on ? pedestrians.pause() : pedestrians.resume());
 }
 viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 
@@ -598,6 +609,12 @@ async function init() {
   }
   main();
   requestAnimationFrame(panLoop);
+  pedestrians = initPedestrians({
+    container: document.getElementById("pedestrians"),
+    config: CONFIG,
+    reduceMotion
+  });
+  if (paintingMode) pedestrians.pause(); // 初始化晚于模式切换的兜底
 }
 
 bgImg.addEventListener("load", measureBg);
@@ -608,5 +625,6 @@ window.__qmsht = {
   config: CONFIG,
   getPan: () => panTarget,
   getPanCur: () => panCur,
-  chimes
+  chimes,
+  ped: () => (pedestrians ? pedestrians.debug() : null)
 };

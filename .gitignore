@@ -1,1 +1,3 @@
 .DS_Store
+# 生图工作目录（imagegen 插件原始输出），入库素材在 assets/pedestrians/
+imagegen/

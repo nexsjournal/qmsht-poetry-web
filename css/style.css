@@ -155,6 +155,9 @@ body[data-mode="painting"] #bgImg {
 .scene {
   position: relative;
   width: 720px;
+  /* 窄屏下保持 720px 布局宽（仅靠 --s 缩放），
+     防止 flex 收缩到 680px 导致桥/诗帘/行人坐标错位 */
+  flex: 0 0 720px;
   transform: scale(var(--s, 1));
   transform-origin: top center;
 }
@@ -205,6 +208,33 @@ body[data-mode="painting"] #bgImg {
   transform: translateX(-50%);
   background: radial-gradient(ellipse at center, rgba(48, 31, 15, 0.3), transparent 70%);
   pointer-events: none;
+}
+
+/* 过桥行人：DOM 精灵层，transform/opacity 走合成器；
+   z-index 4 高于桥图（3）与诗帘画布（2），pointer-events:none 不挡交互 */
+.pedestrians {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.45s ease;
+}
+
+.pedestrians.pedestrians--paused {
+  opacity: 0;
+}
+
+.ped {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: auto;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform, opacity;
 }
 
 /* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(-14) = 197px；
