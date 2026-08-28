@@ -318,6 +318,19 @@ body.panel-open .country-btn--right {
   height: auto;
 }
 
+/* 城楼：与桥底对齐（共用 211px 基线）。
+   chenglou-web.png 内容底（石基底）≈ 图高 89.1%；
+   宽 500px → 图高 375px，底缘外扩 32px，使石基底与水线同高（≈202.5px），
+   屋脊顶高出场景顶约 102px（13vh 场景顶之下仍完整可见） */
+.bridge .bridge__tower {
+  position: absolute;
+  left: 50%;
+  bottom: -32px;
+  transform: translateX(-50%);
+  width: 500px;
+  height: auto;
+}
+
 /* 近侧栏杆前层：与 .bridge 完全重合，z-index 5 高于诗帘画布(2) */
 .bridge-front {
   position: absolute;
@@ -352,8 +365,8 @@ body.panel-open .country-btn--right {
   transition: opacity 0.45s ease;
 }
 
-/* 船自带水面，去掉桥下的暗色投影 */
-body[data-bridge="boat"] .bridge-shadow {
+/* 船自带水面，去掉桥下的暗色投影（城楼的石基下保留作地面阴影） */
+body[data-scene="boat"] .bridge-shadow {
   opacity: 0;
 }
 

@@ -575,54 +575,67 @@ function setPainting(on) {
 }
 viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 
-/* ─── 虹桥 / 帆船 切换（过渡仿 chimes 参考站：场景横滑离场 → 换图 → 反向滑入） ─── */
+/* ─── 场景切换：虹桥 → 帆船 → 城楼 → 虹桥…（过渡仿 chimes 参考站：
+   场景横滑离场 → 换图 → 反向滑入）───────────────────────────────
+   规则（新增图片沿用）：
+   - 每张大图底部对齐同一基线（CSS 中各自 bottom 校准）
+   - 按钮显示「下一张」的图标/名称，并站在其进场侧（dir=+1 左进场在左，-1 右进场在右）
+   - 每张图配自己的诗帘篇目
+────────────────────────────────────────────────────────────── */
 const SWAP_MS = 780;
 const SWAP_EASE = "cubic-bezier(0.42, 0, 1, 1)";
+const SCENES = {
+  bridge: { next: "boat",   dir: 1,  name: "帆船", icon: "assets/selector-boat.png",   collection: "qm" },
+  boat:   { next: "tower",  dir: -1, name: "城楼", icon: "assets/selector-tower.png",  collection: "ch" },
+  tower:  { next: "bridge", dir: 1,  name: "虹桥", icon: "assets/selector-bridge.png", collection: "tq" }
+};
 const bridgeBtn = document.getElementById("bridgeBtn");
 const bridgeBtnIcon = document.getElementById("bridgeBtnIcon");
 const bridgeBtnLabel = document.getElementById("bridgeBtnLabel");
-const bridgeImg = document.getElementById("bridgeImg");
-const bridgeFront = document.querySelector(".bridge-front");
-const boatImg = document.getElementById("boatImg");
+const sceneLayers = {
+  bridge: [document.getElementById("bridgeImg"), document.querySelector(".bridge-front")],
+  boat: [document.getElementById("boatImg")],
+  tower: [document.getElementById("towerImg")]
+};
 const bottomCopy = document.getElementById("bottomCopy");
-let isBoat = false;
+let sceneId = "bridge";
 let swapping = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/* 预加载两套图标，切换时不闪白 */
-["assets/selector-boat.png", "assets/selector-bridge.png"].forEach((src) => {
+/* 预加载全部图标与大图，切换时不闪白 */
+[...Object.values(SCENES).map((s) => s.icon), "assets/chenglou-web.png"].forEach((src) => {
   const im = new Image();
   im.src = src;
 });
 
-function swapLayers(boat) {
-  bridgeImg.hidden = boat;
-  bridgeFront.hidden = boat;
-  boatImg.hidden = !boat;
-  /* 按钮显示「目标」：船模式显示虹桥，桥模式显示帆船 */
-  bridgeBtnIcon.src = boat ? "assets/selector-bridge.png" : "assets/selector-boat.png";
-  bridgeBtnLabel.textContent = boat ? "虹桥" : "帆船";
-  bridgeBtn.setAttribute("aria-pressed", String(boat));
-  bridgeBtn.setAttribute("aria-label", boat ? "切换到虹桥" : "切换到帆船");
-  document.body.dataset.bridge = boat ? "boat" : "bridge";
-  /* 按钮站位在「下一张图的进场侧」：
-     船从左侧进场（dir=+1）→ 桥模式下按钮在左；
-     桥从右侧进场（dir=-1）→ 船模式下按钮在右。
-     后续新增图片时沿用同一规则：按钮始终位于目标图滑入的一侧 */
-  bridgeBtn.classList.toggle("country-btn--right", boat);
-  /* 每张图配自己的诗帘：虹桥=清明·寒食，帆船=春江·烟柳（内容互不相同）。
+function swapLayers(nextId, dir) {
+  for (const [id, layers] of Object.entries(sceneLayers)) {
+    const on = id === nextId;
+    layers.forEach((el) => (el.hidden = !on));
+  }
+  const next = SCENES[nextId];
+  /* 按钮显示「目标」：当前场景下指向下一张图 */
+  bridgeBtnIcon.src = next.icon;
+  bridgeBtnLabel.textContent = next.name;
+  bridgeBtn.setAttribute("aria-pressed", String(sceneId !== "bridge"));
+  bridgeBtn.setAttribute("aria-label", `切换到${next.name}`);
+  document.body.dataset.scene = nextId;
+  /* 按钮站位在「按钮所指目标（下一张图）的进场侧」：
+     用 SCENES[nextId].dir（下一次点击时目标图的方向），而非刚完成切换的 dir */
+  bridgeBtn.classList.toggle("country-btn--right", SCENES[nextId].dir < 0);
+  /* 每张图配自己的诗帘：虹桥=清明·寒食、帆船=春江·烟柳、城楼=踏青·寻春。
      此时场景已滑出屏幕（opacity 0.25 之外），重建不可见 */
-  CONFIG.collection = boat ? "ch" : "qm";
+  CONFIG.collection = SCENES[nextId].collection;
   panelApi.panel.querySelector("select").value = CONFIG.collection;
   rerender();
 }
 
-async function toggleBoat() {
+async function toggleScene() {
   if (swapping) return;
   swapping = true;
   bridgeBtn.disabled = true;
-  const boat = !isBoat;
-  const dir = boat ? 1 : -1; // 船：右出左进；桥：左出右进
+  const nextId = SCENES[sceneId].next;
+  const dir = SCENES[sceneId].dir; // +1：目标从左进场；-1：目标从右进场
   const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}, opacity ${SWAP_MS}ms ${SWAP_EASE}`;
 
   bottomCopy.classList.add("is-dipping");
@@ -632,8 +645,8 @@ async function toggleBoat() {
 
   await sleep(SWAP_MS * 0.78);
 
-  isBoat = boat;
-  swapLayers(boat);
+  sceneId = nextId;
+  swapLayers(nextId, dir);
 
   scene.style.transition = "none";
   scene.style.setProperty("--slide", `${-110 * dir}vw`);
@@ -649,7 +662,7 @@ async function toggleBoat() {
   swapping = false;
   bridgeBtn.disabled = false;
 }
-bridgeBtn.addEventListener("click", toggleBoat);
+bridgeBtn.addEventListener("click", toggleScene);
 
 /* ─── About ─── */
 const aboutModal = document.getElementById("aboutModal");
@@ -692,8 +705,8 @@ window.__qmsht = {
   getPan: () => panTarget,
   getPanCur: () => panCur,
   chimes,
-  get isBoat() {
-    return isBoat;
+  get sceneId() {
+    return sceneId;
   },
-  toggleBoat
+  toggleScene
 };
