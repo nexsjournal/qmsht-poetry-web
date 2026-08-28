@@ -147,8 +147,9 @@ body[data-mode="painting"] #bgImg {
 .country-btn {
   position: fixed;
   z-index: 15;
+  /* 站位在目标图进场的一侧：默认左侧；.country-btn--right 切到右侧（JS 按切换方向设置） */
   left: 28px;
-  top: 50%;
+  top: 34%;
   transform: translateY(-50%);
   width: 80px;
   height: 80px;
@@ -175,6 +176,12 @@ body[data-mode="painting"] #bgImg {
   transition:
     transform 220ms cubic-bezier(0.42, 0, 1, 1),
     opacity 220ms ease;
+}
+
+/* 目标图从右侧进场时，按钮换到右侧 */
+.country-btn--right {
+  left: auto;
+  right: 28px;
 }
 
 .country-btn:focus-visible {
@@ -233,14 +240,15 @@ body[data-mode="painting"] #bgImg {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 9vh;
+  /* 桥/船 + 诗帘整体下移：给桅杆与顶栏留出空间，远离底部文案 */
+  padding-top: 13vh;
 }
 
 .scene {
   position: relative;
   width: 720px;
   /* 窄屏下保持 720px 布局宽（仅靠 --s 缩放），
-     防止 flex 收缩到 680px 导致桥/诗帘/行人坐标错位 */
+     防止 flex 收缩到 680px 导致桥/船/诗帘坐标错位 */
   flex: 0 0 720px;
   /* --slide：桥/船切换时整体横滑（chimes 参考站同款），先缩放后平移 */
   transform: translateX(var(--slide, 0px)) scale(var(--s, 1));
@@ -300,8 +308,7 @@ body[data-mode="painting"] #bgImg {
   height: auto;
 }
 
-/* 近侧栏杆前层：与 .bridge 完全重合，z-index 5 高于行人(4)，
-   自然遮挡行人腿部（行人走在栏杆内侧的桥面上） */
+/* 近侧栏杆前层：与 .bridge 完全重合，z-index 5 高于诗帘画布(2) */
 .bridge-front {
   position: absolute;
   z-index: 5;
@@ -338,34 +345,6 @@ body[data-mode="painting"] #bgImg {
 /* 船自带水面，去掉桥下的暗色投影 */
 body[data-bridge="boat"] .bridge-shadow {
   opacity: 0;
-}
-
-/* 过桥行人：DOM 精灵层，transform/opacity 走合成器；
-   z-index 4 高于桥图（3）与诗帘画布（2），pointer-events:none 不挡交互 */
-.pedestrians {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity 0.45s ease;
-}
-
-.pedestrians.pedestrians--paused {
-  opacity: 0;
-}
-
-.ped {
-  position: absolute;
-  left: 0;
-  top: 0;
-  /* 按显示高 24px（≈1/18 桥长，真实人体比例），宽随素材比例自动 */
-  height: 24px;
-  width: auto;
-  display: block;
-  user-select: none;
-  -webkit-user-drag: none;
-  will-change: transform, opacity;
 }
 
 /* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(-14) = 197px；
@@ -868,7 +847,7 @@ body[data-mode="painting"] .scroll-hint {
   }
 
   .area {
-    padding-top: 7vh;
+    padding-top: 10vh;
   }
 
   .bottom-copy {

@@ -2,7 +2,6 @@ import { smoothstep, getPointID, charForCell } from "./utils.js";
 import { clothText } from "./poems.js";
 import { chimes } from "./chimes.js";
 import { buildPanel } from "./panel.js";
-import { initPedestrians } from "./pedestrians.js";
 
 /* ─── 参数（默认值对齐参考站面板截图） ─── */
 const CONFIG = {
@@ -20,14 +19,7 @@ const CONFIG = {
   contain: false,
   chimes: true,
   chimeVolume: 0.28,
-  collection: "all",
-  /* 过桥行人 */
-  pedCount: 3,
-  pedDuration: 10,
-  pedFadeIn: 1.2,
-  pedFadeOut: 0.9,
-  pedGapMin: 1,
-  pedGapMax: 4
+  collection: "all"
 };
 
 /* ─── 场景几何 ─── */
@@ -46,7 +38,6 @@ const hudFill = document.getElementById("hudFill");
 let rafID = 0;
 let input = null;
 let constraintsArr = [];
-let pedestrians = null;
 
 function isUiEvent(e) {
   return !!(
@@ -574,8 +565,6 @@ function setPainting(on) {
     panelBtn.setAttribute("aria-expanded", "false");
     if (!aboutModal.hidden) setAboutOpen(false);
   }
-  /* 行人：展画卷整体淡出并冻结，回诗帘原样恢复（不重置 t，无跳变）；船模式下不恢复 */
-  if (pedestrians) (on || isBoat ? pedestrians.pause() : pedestrians.resume());
 }
 viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 
@@ -609,11 +598,11 @@ function swapLayers(boat) {
   bridgeBtn.setAttribute("aria-pressed", String(boat));
   bridgeBtn.setAttribute("aria-label", boat ? "切换到虹桥" : "切换到帆船");
   document.body.dataset.bridge = boat ? "boat" : "bridge";
-  /* 行人只走在虹桥上：船模式或展画卷模式下暂停，回桥且诗帘模式时恢复 */
-  if (pedestrians) {
-    if (boat || paintingMode) pedestrians.pause();
-    else pedestrians.resume();
-  }
+  /* 按钮站位在「下一张图的进场侧」：
+     船从左侧进场（dir=+1）→ 桥模式下按钮在左；
+     桥从右侧进场（dir=-1）→ 船模式下按钮在右。
+     后续新增图片时沿用同一规则：按钮始终位于目标图滑入的一侧 */
+  bridgeBtn.classList.toggle("country-btn--right", boat);
 }
 
 async function toggleBoat() {
@@ -680,12 +669,6 @@ async function init() {
   }
   main();
   requestAnimationFrame(panLoop);
-  pedestrians = initPedestrians({
-    container: document.getElementById("pedestrians"),
-    config: CONFIG,
-    reduceMotion
-  });
-  if (paintingMode) pedestrians.pause(); // 初始化晚于模式切换的兜底
 }
 
 bgImg.addEventListener("load", measureBg);
@@ -697,7 +680,6 @@ window.__qmsht = {
   getPan: () => panTarget,
   getPanCur: () => panCur,
   chimes,
-  ped: () => (pedestrians ? pedestrians.debug() : null),
   get isBoat() {
     return isBoat;
   },

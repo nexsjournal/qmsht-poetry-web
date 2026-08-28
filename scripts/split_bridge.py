@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """一次性素材管线：把 hongqiao-web.png 拆成
-  - hongqiao-back.png  后层：桥身 + 栏杆以外的全部（行人之下/之后）
+  - hongqiao-back.png  后层：桥身 + 栏杆以外的全部
   - hongqiao-front.png 前层：近侧栏杆带（扶手顶包络 → 桥面脚底线 +5px）
-行人精灵夹在两层之间（z-index：back < pedestrians < front），
-栏杆自然遮挡行人腿部。
+页面中 z-index：back(3) < 诗帘画布(2 之上) < front(5)。
 
 脚底线（桥面顶板，已实测校准）：walkY(x) = 59 + 0.0004099·(x−600)²
 前层上缘 = 每列首个不透明像素（栏杆/望柱顶包络）
-仅 x∈[60,1140]（行人路径范围）且该列栏杆高度 ≥6px 时生成前层。
+仅 x∈[60,1140] 且该列栏杆高度 ≥6px 时生成前层。
 """
 
 import os
