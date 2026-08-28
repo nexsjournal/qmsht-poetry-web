@@ -198,6 +198,28 @@ body[data-mode="painting"] #bgImg {
   -webkit-user-drag: none;
 }
 
+/* 近侧栏杆前层：与 .bridge 完全重合，z-index 5 高于行人(4)，
+   自然遮挡行人腿部（行人走在栏杆内侧的桥面上） */
+.bridge-front {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 50%;
+  width: 680px;
+  height: 211px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.bridge-front img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .bridge-shadow {
   position: absolute;
   z-index: 1;
@@ -229,8 +251,9 @@ body[data-mode="painting"] #bgImg {
   position: absolute;
   left: 0;
   top: 0;
-  width: 24px;
-  height: auto;
+  /* 按显示高 24px（≈1/18 桥长，真实人体比例），宽随素材比例自动 */
+  height: 24px;
+  width: auto;
   display: block;
   user-select: none;
   -webkit-user-drag: none;

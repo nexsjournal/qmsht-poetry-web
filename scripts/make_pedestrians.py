@@ -1,69 +1,64 @@
 #!/usr/bin/env python3
-"""一次性素材管线：把 imagegen 生成的青底宋代行人图处理成
-透明底、脚底对齐、统一高度的 PNG 精灵（入库后运行时不再处理）。
+"""一次性素材管线 v2：把 imagegen 生成的「4 格步行序列条」处理成
+透明底、脚底对齐、统一高度的 4 帧步行精灵（入库后运行时不再处理）。
 
-用法：python3 scripts/make_pedestrians.py
-输入：imagegen/ 下按时间排序的 4 张 512x1024 原图
-输出：assets/pedestrians/ped1..4.png（RGBA，高 96px，脚底贴底边）
+输入：imagegen/ 下 4 张 1024x512 青底 4 格序列条（按文件名排序 = 角色序）
+输出：assets/pedestrians/ped{i}_f{j}.png（RGBA，高 96px，脚底贴底边，i=1..4 角色，j=0..3 帧）
+
+步骤：整条 1024x512 一次处理：
+  1) 背景参考色 = 条带边缘采样中位数（青底，含噪声）
+  2) 逐像素距离 → 软 alpha
+  3) 连通块分析：取 4 个人物主体（含跨格的拖曳裙裾），按 x 排序
+  4) 各自裁剪到包围盒（脚底=底边），统一缩放到 96px 高
+  5) 轻微降饱和贴近绢色
 """
 
 import os
 import sys
+import glob
+from collections import deque
 
 from PIL import Image, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC_GLOB_DIR = os.path.join(ROOT, "imagegen")
+SRC_DIR = os.path.join(ROOT, "imagegen")
 OUT_DIR = os.path.join(ROOT, "assets", "pedestrians")
 
-OUT_H = 96          # 精灵高度（页面显示约 24px，留 4x 余量）
-SILK = (233, 220, 194)  # 页面绢色
-ALPHA_LO = 18       # 距背景色 < 18 → 完全透明
-ALPHA_HI = 60       # 距背景色 > 60 → 完全不透明
-
-
-def border_samples(img, n=400):
-    """沿四边采样背景色（跳过四角 40px，避开人物落笔）。"""
-    w, h = img.size
-    px = img.load()
-    pts = []
-    for i in range(n):
-        t = i / n * (w - 80) + 40
-        pts.append((int(t), 3))
-        pts.append((int(t), h - 4))
-        t2 = i / n * (h - 80) + 40
-        pts.append((3, int(t2)))
-        pts.append((w - 4, int(t2)))
-    samples = [px[x, y] for x, y in pts]
-    return samples
-
-
-def two_ref_colors(samples):
-    """从边框样本里取「主背景色」与「最大偏离色」两个参考（青色底 + 米色斑驳）。"""
-    def mean(cols):
-        k = len(cols)
-        return tuple(sum(c[i] for c in cols) // k for i in range(3))
-
-    primary = mean(samples)
-    # 与 primary 距离 > 45 的样本视为斑驳带
-    outliers = [s for s in samples if dist(s, primary) > 45]
-    secondary = mean(outliers) if outliers else primary
-    return primary, secondary
+OUT_H = 96            # 精灵高度（页面显示约 24px）
+SILK = (233, 220, 194)
+ALPHA_LO = 30         # 距背景色 < 30 → 透明
+ALPHA_HI = 90         # 距背景色 > 90 → 不透明（淡彩人物与青底色差大）
+MIN_AREA = 4000       # 人物连通块最小面积（px）
 
 
 def dist(a, b):
     return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
 
 
-def alpha_map(img, refs):
-    """逐像素：距最近背景参考色 → 0..1 alpha（远=不透明）。"""
+def edge_reference(panel):
+    """取格子四周像素的中位数颜色作为背景参考。"""
+    w, h = panel.size
+    px = panel.load()
+    cols = []
+    for x in range(w):
+        cols.append(px[x, 2])
+        cols.append(px[x, h - 3])
+    for y in range(h):
+        cols.append(px[2, y])
+        cols.append(px[w - 3, y])
+    cols.sort()
+    return cols[len(cols) // 2]
+
+
+def alpha_map(img, ref):
     w, h = img.size
     px = img.load()
     out = [[0.0] * w for _ in range(h)]
     for y in range(h):
         row = out[y]
         for x in range(w):
-            d = min(dist(px[x, y], r) for r in refs)
+            r, g, b = px[x, y][:3]
+            d = ((r - ref[0]) ** 2 + (g - ref[1]) ** 2 + (b - ref[2]) ** 2) ** 0.5
             if d <= ALPHA_LO:
                 row[x] = 0.0
             elif d >= ALPHA_HI:
@@ -73,70 +68,87 @@ def alpha_map(img, refs):
     return out
 
 
-def largest_component(alpha, w, h):
-    """保留与人物相连的最大连通块，丢弃残留背景斑点。BFS（4 邻域）。"""
-    best = None
-    best_n = 0
-    seen = [[False] * w for _ in range(h)]
-    from collections import deque
+def desaturate_toward_silk(rgb):
+    r, g, b = rgb
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx == 0:
+        return (0, 0, 0)
+    sat = (mx - mn) / mx
+    f = (sat * 0.85) / max(sat, 1e-6)  # 轻度降饱和
+    lum = 0.299 * r + 0.587 * g + 0.114 * b
+    vals = [
+        int(round((lum + (v - lum) * f) * 0.93 + SILK[i] * 0.07))
+        for i, v in enumerate((r, g, b))
+    ]
+    return tuple(min(255, max(0, v)) for v in vals)
 
+
+def erase_dividers(strip, alpha):
+    """擦除 4 格之间的黑色分格线：找每个四分点附近「最长竖直暗色游程」的列，
+    仅清除该列 ±1 内的暗像素（保留裙裾等亮色人物像素）。"""
+    w, h = strip.size
+    px = strip.load()
+    for bx in (w // 4, w // 2, 3 * w // 4):
+        best_x, best_run = None, 0
+        for x in range(bx - 12, bx + 13):
+            run = col = 0
+            for y in range(h):
+                r, g, b = px[x, y][:3]
+                lum = 0.299 * r + 0.587 * g + 0.114 * b
+                if lum < 110:
+                    run += 1
+                    col = max(col, run)
+                else:
+                    run = 0
+            if col > best_run:
+                best_run, best_x = col, x
+        if best_x is None or best_run < 150:
+            print(f"  ?? 分格线未找到 (x≈{bx}, 最长暗游程 {best_run})")
+            continue
+        for x in (best_x - 1, best_x, best_x + 1):
+            for y in range(h):
+                r, g, b = px[x, y][:3]
+                if 0.299 * r + 0.587 * g + 0.114 * b < 120:
+                    alpha[y][x] = 0.0
+
+
+def all_components(alpha, w, h, min_area):
+    """返回所有 ≥min_area 的连通块 [(x0,y0,x1,y1,points)]，按 x0 排序。"""
+    seen = [[False] * w for _ in range(h)]
+    coms = []
     for sy in range(h):
         for sx in range(w):
             if seen[sy][sx] or alpha[sy][sx] < 0.5:
                 continue
             q = deque([(sx, sy)])
             seen[sy][sx] = True
-            comp = []
+            pts = []
             while q:
                 x, y = q.popleft()
-                comp.append((x, y))
+                pts.append((x, y))
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                     nx, ny = x + dx, y + dy
                     if 0 <= nx < w and 0 <= ny < h and not seen[ny][nx] and alpha[ny][nx] >= 0.5:
                         seen[ny][nx] = True
                         q.append((nx, ny))
-            if len(comp) > best_n:
-                best_n = len(comp)
-                best = set(comp)
-    return best
+            if len(pts) >= min_area:
+                xs = [p[0] for p in pts]
+                ys = [p[1] for p in pts]
+                coms.append((min(xs), min(ys), max(xs) + 1, max(ys) + 1, pts))
+    coms.sort(key=lambda c: c[0])
+    return coms
 
 
-def desaturate_toward_silk(rgb):
-    """降饱和 + 轻混绢色，贴近页面色调。"""
-    r, g, b = rgb
-    mx, mn = max(r, g, b), min(r, g, b)
-    if mx:
-        sat = (mx - mn) / mx
-        new_sat = sat * 0.72
-        lum = 0.299 * r + 0.587 * g + 0.114 * b
-        # 向 (lum,lum,lum) 收缩后再混 12% 绢色
-        f = new_sat / max(sat, 1e-6)
-        vals = [
-            int(round((lum + (v - lum) * f) * 0.88 + SILK[i] * 0.12))
-            for i, v in enumerate((r, g, b))
-        ]
-        return tuple(min(255, max(0, v)) for v in vals)
-    return (r, g, b)
-
-
-def process(src, dst):
-    img = Image.open(src).convert("RGB")
-    w, h = img.size
-    refs = two_ref_colors(border_samples(img))
-    alpha = alpha_map(img, refs)
-    comp = largest_component(alpha, w, h)
-    if comp is None:
-        raise RuntimeError(f"{src}: 未找到人物主体")
-
-    # 裁剪到主体包围盒
-    xs = [p[0] for p in comp]
-    ys = [p[1] for p in comp]
-    x0, x1, y0, y1 = min(xs), max(xs) + 1, min(ys), max(ys) + 1
-
-    crop = img.crop((x0, y0, x1, y1))
+def process_component(strip, alpha, comp, dst):
+    """把一个连通块（人物，可含跨格裙裾）裁成统一高度的精灵。"""
+    x0, y0, x1, y1, pts = comp
+    w, h = strip.size
+    if x0 <= 1 or x1 >= w - 1:
+        print(f"  !! 人物贴条带边缘 (x0={x0}, x1={x1}, w={w})，可能被截断")
+    crop = strip.crop((x0, y0, x1, y1))
     cw, ch = crop.size
     px = crop.load()
-    comp_rel = {(x - x0, y - y0) for (x, y) in comp}
+    comp_rel = {(x - x0, y - y0) for (x, y) in pts}
 
     rgba = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
     apx = rgba.load()
@@ -144,37 +156,70 @@ def process(src, dst):
         for x in range(cw):
             a = alpha[y0 + y][x0 + x]
             if (x, y) in comp_rel and a > 0:
-                r, g, b = desaturate_toward_silk(px[x, y])
+                r, g, b = desaturate_toward_silk(px[x, y][:3])
                 apx[x, y] = (r, g, b, int(round(a * 255)))
-    # 丢弃最大连通块之外仍半透明的像素（斑驳残留）
-    # alpha 边缘羽化
-    a_layer = rgba.getchannel("A")
-    a_layer = a_layer.filter(ImageFilter.GaussianBlur(1.0))
+    # 边缘羽化
+    a_layer = rgba.getchannel("A").filter(ImageFilter.GaussianBlur(1.0))
     rgba = Image.merge("RGBA", (rgba.getchannel("R"), rgba.getchannel("G"),
                                 rgba.getchannel("B"), a_layer))
-
-    # 再裁一次（羽化后透明边），脚底贴底边
     bbox = rgba.getbbox()
     if not bbox:
-        raise RuntimeError(f"{src}: 主体丢失")
+        return None
     rgba = rgba.crop(bbox)
-
-    # 统一高度
     nw = max(8, round(rgba.width * OUT_H / rgba.height))
     rgba = rgba.resize((nw, OUT_H), Image.LANCZOS)
-    os.makedirs(OUT_DIR, exist_ok=True)
     rgba.save(dst, "PNG")
-    print(f"{os.path.basename(src)} -> {os.path.relpath(dst, ROOT)}  {rgba.size}")
+    return rgba.size
+
+
+def process_strip(src, i):
+    strip = Image.open(src).convert("RGBA")
+    w, h = strip.size
+    if w != 1024 or h != 512:
+        print(f"  !! {src} 尺寸 {w}x{h} 非 1024x512，跳过")
+        return False
+    ref = edge_reference(strip)
+    alpha = alpha_map(strip, ref)
+    erase_dividers(strip, alpha)
+    coms = all_components(alpha, w, h, MIN_AREA)
+    if len(coms) != 4:
+        print(f"  !! {os.path.basename(src)} 期望 4 个人物，实际 {len(coms)} 个连通块")
+        for c in coms:
+            print(f"     bbox x[{c[0]},{c[2]}] y[{c[1]},{c[3]}] area={len(c[4])}")
+        return False
+    ok = True
+    for j, comp in enumerate(coms):
+        dst = os.path.join(OUT_DIR, f"ped{i}_f{j}.png")
+        size = process_component(strip, alpha, comp, dst)
+        if size is None:
+            print(f"  !! ped{i} 帧{j} 处理失败")
+            ok = False
+        else:
+            print(f"  ped{i} 帧{j}: {size[0]}x{size[1]}  (源 bbox x[{comp[0]},{comp[2]}])")
+    return ok
 
 
 def main():
-    import glob
-
-    srcs = sorted(glob.glob(os.path.join(SRC_GLOB_DIR, "2026-08-28-02-56-*.png")))
-    if len(srcs) < 4:
-        sys.exit(f"需要 4 张原图，实际 {len(srcs)}: {srcs}")
-    for i, s in enumerate(srcs[:4], 1):
-        process(s, os.path.join(OUT_DIR, f"ped{i}.png"))
+    # 4 张合格序列条（按文件名排序 = 角色序：书生/杖者/商人/仕女）
+    names = [
+        "2026-08-28-03-52-31-1.png",  # ped1 书生（折扇）
+        "2026-08-28-03-39-52-1.png",  # ped2 杖者（竹杖）
+        "2026-08-28-03-40-04-1.png",  # ped3 商人（包袱）
+        "2026-08-28-03-51-16-1.png",  # ped4 仕女（襦裙）
+    ]
+    srcs = [os.path.join(SRC_DIR, n) for n in names]
+    missing = [n for n in names if not os.path.exists(os.path.join(SRC_DIR, n))]
+    if missing:
+        sys.exit(f"缺少序列条: {missing}")
+    os.makedirs(OUT_DIR, exist_ok=True)
+    # 清掉旧单帧素材
+    for f in glob.glob(os.path.join(OUT_DIR, "ped[1-4].png")):
+        os.remove(f)
+    all_ok = True
+    for i, s in enumerate(srcs, 1):
+        print(f"[{i}] {os.path.basename(s)}")
+        all_ok &= process_strip(s, i)
+    sys.exit(0 if all_ok else 1)
 
 
 if __name__ == "__main__":
