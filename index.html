@@ -31,9 +31,14 @@
           清明 · 虹桥
           <span class="brand__sub">Along the River during the Qingming Festival</span>
         </div>
-        <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
-          音律
-        </button>
+        <div class="topbar__actions">
+          <button type="button" class="ui-btn" id="bridgeBtn" aria-pressed="false" aria-label="切换虹桥 / 帆船">
+            帆船
+          </button>
+          <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
+            音律
+          </button>
+        </div>
       </header>
 
       <div class="panel-anchor" id="panelAnchor"></div>
@@ -42,6 +47,13 @@
         <div class="scene" id="scene">
           <div class="bridge" id="bridgeBack">
             <img id="bridgeImg" src="assets/hongqiao-back.png" alt="虹桥" />
+            <img
+              id="boatImg"
+              class="bridge__boat"
+              src="assets/fanchuan-web.png"
+              alt="汴河帆船"
+              hidden
+            />
           </div>
           <div class="pedestrians" id="pedestrians" aria-hidden="true"></div>
           <div class="bridge-front" aria-hidden="true">

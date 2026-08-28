@@ -574,10 +574,67 @@ function setPainting(on) {
     panelBtn.setAttribute("aria-expanded", "false");
     if (!aboutModal.hidden) setAboutOpen(false);
   }
-  /* 行人：展画卷整体淡出并冻结，回诗帘原样恢复（不重置 t，无跳变） */
-  if (pedestrians) (on ? pedestrians.pause() : pedestrians.resume());
+  /* 行人：展画卷整体淡出并冻结，回诗帘原样恢复（不重置 t，无跳变）；船模式下不恢复 */
+  if (pedestrians) (on || isBoat ? pedestrians.pause() : pedestrians.resume());
 }
 viewBtn.addEventListener("click", () => setPainting(!paintingMode));
+
+/* ─── 虹桥 / 帆船 切换（过渡仿 chimes 参考站：场景横滑离场 → 换图 → 反向滑入） ─── */
+const SWAP_MS = 780;
+const SWAP_EASE = "cubic-bezier(0.42, 0, 1, 1)";
+const bridgeBtn = document.getElementById("bridgeBtn");
+const bridgeImg = document.getElementById("bridgeImg");
+const bridgeFront = document.querySelector(".bridge-front");
+const boatImg = document.getElementById("boatImg");
+const bottomCopy = document.getElementById("bottomCopy");
+let isBoat = false;
+let swapping = false;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function swapLayers(boat) {
+  bridgeImg.hidden = boat;
+  bridgeFront.hidden = boat;
+  boatImg.hidden = !boat;
+  bridgeBtn.textContent = boat ? "虹桥" : "帆船";
+  bridgeBtn.setAttribute("aria-pressed", String(boat));
+  /* 行人只走在虹桥上：船模式或展画卷模式下暂停，回桥且诗帘模式时恢复 */
+  if (pedestrians) {
+    if (boat || paintingMode) pedestrians.pause();
+    else pedestrians.resume();
+  }
+}
+
+async function toggleBoat() {
+  if (swapping) return;
+  swapping = true;
+  const boat = !isBoat;
+  const dir = boat ? 1 : -1; // 船：右出左进；桥：左出右进
+  const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}, opacity ${SWAP_MS}ms ${SWAP_EASE}`;
+
+  bottomCopy.classList.add("is-dipping");
+  scene.style.transition = trans;
+  scene.style.setProperty("--slide", `${110 * dir}vw`);
+  scene.style.opacity = "0.25";
+
+  await sleep(SWAP_MS * 0.78);
+
+  isBoat = boat;
+  swapLayers(boat);
+
+  scene.style.transition = "none";
+  scene.style.setProperty("--slide", `${-110 * dir}vw`);
+  void scene.offsetWidth;
+  scene.style.transition = trans;
+  scene.style.setProperty("--slide", "0px");
+  scene.style.opacity = "1";
+
+  await sleep(SWAP_MS);
+  scene.style.transition = "";
+  scene.style.opacity = "";
+  bottomCopy.classList.remove("is-dipping");
+  swapping = false;
+}
+bridgeBtn.addEventListener("click", toggleBoat);
 
 /* ─── About ─── */
 const aboutModal = document.getElementById("aboutModal");
@@ -626,5 +683,9 @@ window.__qmsht = {
   getPan: () => panTarget,
   getPanCur: () => panCur,
   chimes,
-  ped: () => (pedestrians ? pedestrians.debug() : null)
+  ped: () => (pedestrians ? pedestrians.debug() : null),
+  get isBoat() {
+    return isBoat;
+  },
+  toggleBoat
 };
