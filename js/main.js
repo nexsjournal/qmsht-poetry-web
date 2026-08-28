@@ -730,15 +730,18 @@ async function goScene(delta) {
   const targetIdx = (sceneIdx + delta + SCENE_ORDER.length) % SCENE_ORDER.length;
   /* delta=+1（右按钮·下一张）：新图从右进场 → 旧层向左滑出（dir=-1）
      delta=-1（左按钮·上一张）：新图从左进场 → 旧层向右滑出（dir=+1）
-     900px 为场景坐标（场景宽 720px），保证整层完全滑出屏幕 */
+     滑出距离按视口动态计算：场景半宽(360) + 视口半宽(场景坐标) + 余量，
+     宽屏下场景居中、两侧有大片空白，固定值会残留旧图 */
   const dir = -delta;
-  const SLIDE_OUT = 900;
+  const s = Math.min(1, (vw - 24) / 720);
+  const SLIDE_OUT = Math.ceil(360 + vw / (2 * s) + 60);
   const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}`;
   const fromS = slides[activeSlide];
   const toS = slides[1 - activeSlide];
 
   /* 新图放入空闲层，置于进场侧屏外；旧层与新层同时滑动（重叠可见） */
   setLayer(toS, sceneAt(targetIdx));
+  toS.el.style.visibility = "visible";
   fromS.el.style.transition = "none";
   toS.el.style.transition = "none";
   fromS.el.style.transform = "translateX(0px)";
@@ -760,6 +763,8 @@ async function goScene(delta) {
 
   await sleep(SWAP_MS * 0.5);
   fromS.el.style.zIndex = "";
+  /* 旧层彻底隐藏：杜绝宽屏/缩放下任何残留 */
+  fromS.el.style.visibility = "hidden";
   activeSlide = 1 - activeSlide;
   bottomCopy.classList.remove("is-dipping");
   swapping = false;
