@@ -146,7 +146,8 @@ body[data-mode="painting"] #bgImg {
    84px 手绘波浪墨线框 + 目标小图标 + 标签，hover 上移 2px） ─── */
 .country-btn {
   position: fixed;
-  z-index: 15;
+  /* z-index 45 高于音律面板(40)：按钮永不被遮挡、永远可见 */
+  z-index: 45;
   /* 站位在目标图进场的一侧：默认左侧；.country-btn--right 切到右侧（JS 按切换方向设置） */
   left: 28px;
   top: 34%;
@@ -175,13 +176,20 @@ body[data-mode="painting"] #bgImg {
   box-sizing: border-box;
   transition:
     transform 220ms cubic-bezier(0.42, 0, 1, 1),
-    opacity 220ms ease;
+    opacity 220ms ease,
+    right 0.3s ease,
+    filter 220ms ease;
 }
 
 /* 目标图从右侧进场时，按钮换到右侧 */
 .country-btn--right {
   left: auto;
   right: 28px;
+}
+
+/* 音律面板展开时（右侧高 732px），右侧按钮让位到面板左边，避免压在面板上 */
+body.panel-open .country-btn--right {
+  right: 356px;
 }
 
 .country-btn:focus-visible {
@@ -197,8 +205,10 @@ body[data-mode="painting"] #bgImg {
   transform: translateY(-50%);
 }
 
+/* 不可点击时置灰（切换动画进行中）：保持可见，只降饱和 + 轻降透明 */
 .country-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.55;
+  filter: grayscale(1);
   cursor: default;
   transform: translateY(-50%);
 }
@@ -875,6 +885,11 @@ body[data-mode="painting"] .scroll-hint {
     right: 12px;
     top: 58px;
     width: min(320px, calc(100vw - 24px));
+  }
+
+  /* 窄屏下面板近全宽，按钮不再让位，直接浮在面板之上（z-index 已高于面板） */
+  body.panel-open .country-btn--right {
+    right: 28px;
   }
 
   .about__panel {

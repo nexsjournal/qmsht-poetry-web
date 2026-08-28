@@ -19,7 +19,8 @@ const CONFIG = {
   contain: false,
   chimes: true,
   chimeVolume: 0.28,
-  collection: "all"
+  /* 诗帘篇目跟随场景：虹桥=清明·寒食，帆船=春江·烟柳（见 swapLayers） */
+  collection: "qm"
 };
 
 /* ─── 场景几何 ─── */
@@ -552,6 +553,12 @@ panelBtn.addEventListener("click", () => {
   panelBtn.setAttribute("aria-expanded", String(open));
 });
 
+/* 面板展开/收起时同步 body 类：右侧切换按钮让位到面板左边，永不被遮挡。
+   用 MutationObserver 监听 hidden 属性（toggle 事件不响应程序化修改） */
+new MutationObserver(() => {
+  document.body.classList.toggle("panel-open", !panelApi.panel.hidden);
+}).observe(panelApi.panel, { attributes: true, attributeFilter: ["hidden"] });
+
 /* ─── 展画卷 / 回诗帘 ─── */
 const viewBtn = document.getElementById("viewBtn");
 const scrollHint = document.querySelector(".scroll-hint");
@@ -603,6 +610,11 @@ function swapLayers(boat) {
      桥从右侧进场（dir=-1）→ 船模式下按钮在右。
      后续新增图片时沿用同一规则：按钮始终位于目标图滑入的一侧 */
   bridgeBtn.classList.toggle("country-btn--right", boat);
+  /* 每张图配自己的诗帘：虹桥=清明·寒食，帆船=春江·烟柳（内容互不相同）。
+     此时场景已滑出屏幕（opacity 0.25 之外），重建不可见 */
+  CONFIG.collection = boat ? "ch" : "qm";
+  panelApi.panel.querySelector("select").value = CONFIG.collection;
+  rerender();
 }
 
 async function toggleBoat() {
