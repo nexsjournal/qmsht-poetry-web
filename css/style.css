@@ -276,6 +276,8 @@ body[data-mode="painting"] #bgImg {
   margin: 0 0 14px;
   max-width: 240px;
   margin-left: auto;
+  /* 右缘与「关于」/ .view-btn（right: 20px）对齐 */
+  margin-right: calc(20px - 5vw);
   font-size: 12.5px;
   line-height: 1.9;
   color: #453b31;
@@ -290,6 +292,10 @@ body[data-mode="painting"] #bgImg {
   border: 0;
   border-bottom: 1px solid #6b5847;
   padding: 2px 1px 3px;
+  /* 上移并右移：右缘与 .view-btn（right: 20px）对齐，避开「展画卷」按钮
+     （右对齐行内元素需负 margin-right 才能向视口边缘方向偏移） */
+  margin-right: calc(20px - 5vw);
+  margin-bottom: 12px;
   cursor: pointer;
 }
 
@@ -330,7 +336,7 @@ body[data-mode="painting"] #bgImg {
 
 .hud__fill {
   position: absolute;
-  left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
   width: 0%;
@@ -712,6 +718,12 @@ body[data-mode="painting"] .scroll-hint {
 
   .aside {
     margin-left: 0;
+    margin-right: 0;
+  }
+
+  .about-btn {
+    margin-right: 0;
+    margin-bottom: 0;
   }
 
   .panel {
