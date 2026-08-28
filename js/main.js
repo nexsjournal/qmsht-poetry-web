@@ -26,7 +26,7 @@ const CONFIG = {
 const SCENE_W = 720;
 const PAD = 300; // 布帘画布四周留白（摆动不裁切）
 const BRIDGE_H = 211;
-const CLOTH_GAP = 18;
+const CLOTH_GAP = -26; // 负值：诗帘顶端伸入桥图水面之下，水盖住一点点字
 
 const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

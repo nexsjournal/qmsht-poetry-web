@@ -171,6 +171,7 @@ body[data-mode="painting"] #bgImg {
 
 .bridge {
   position: relative;
+  z-index: 3;
   width: 680px;
   height: 211px;
   margin: 0 auto;
@@ -187,6 +188,7 @@ body[data-mode="painting"] #bgImg {
 
 .bridge-shadow {
   position: absolute;
+  z-index: 1;
   left: 50%;
   top: 178px;
   width: 560px;
@@ -196,14 +198,16 @@ body[data-mode="painting"] #bgImg {
   pointer-events: none;
 }
 
-/* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(18) = 229px；
-   画布含 PAD(300) 四周留白 */
+/* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(-26) = 185px；
+   画布含 PAD(300) 四周留白。诗帘顶行钉在 185+7=192px，
+   被桥图水面（0–211px）盖住一点点，图在字上层 */
 .strings {
   position: absolute;
   left: 0;
-  top: 229px;
+  top: 185px;
   width: 720px;
   height: 0;
+  z-index: 2;
 }
 
 .strings canvas {
