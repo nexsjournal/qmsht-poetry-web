@@ -54,6 +54,7 @@ body {
   top: 50%;
   left: 0;
   height: 100vh;
+  height: 100dvh;
   width: auto;
   transform: translate3d(0, -50%, 0);
   will-change: transform;
@@ -72,6 +73,7 @@ body[data-mode="painting"] #bgImg {
   position: relative;
   z-index: 1;
   height: 100vh;
+  height: 100dvh;
 }
 
 /* ─── 顶栏 ─── */
@@ -541,13 +543,24 @@ body.panel-open .nav-btn--right {
   top: 64px;
   right: 20px;
   width: 320px;
+  max-height: calc(100vh - 78px);
+  max-height: calc(100dvh - 78px);
   z-index: 40;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(180deg, var(--paper), var(--paper-2));
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: 0 16px 48px rgba(56, 40, 26, 0.35);
   overflow: hidden;
   pointer-events: auto;
+}
+
+/* 面板超屏高时内容区可滚（小屏手机必须） */
+.pbody {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .panel[hidden] {
@@ -830,9 +843,11 @@ body[data-mode="painting"] .area {
 }
 
 body[data-mode="painting"] .bottom-copy,
-body[data-mode="painting"] .scroll-hint {
+body[data-mode="painting"] .scroll-hint,
+body[data-mode="painting"] .hud {
   opacity: 0;
   pointer-events: none;
+  transition: opacity 0.5s ease;
 }
 
 /* 展画卷状态：隐藏左上标题与左右切换钮（音律按钮保留） */
@@ -853,8 +868,11 @@ body[data-mode="painting"] .nav-btn {
 .view-btn {
   position: fixed;
   right: 20px;
-  bottom: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 45;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
   background-color: var(--brown);
   background-image: repeating-linear-gradient(
     90deg,
@@ -935,5 +953,77 @@ body[data-mode="painting"] .nav-btn {
 
   .about__photo {
     max-width: 260px;
+  }
+
+  /* 手机：诗帘几乎占满屏宽，切换钮压在密字上看不清——
+     给按钮加纸色底 + 投影，恢复「卡片感」 */
+  .nav-btn {
+    background-image:
+      linear-gradient(rgba(246, 239, 227, 0.92), rgba(243, 234, 217, 0.92)),
+      url("../assets/selector-frame.svg");
+    background-size:
+      60px 60px,
+      84px 84px;
+    background-position: center, center;
+    box-shadow: 0 4px 14px rgba(58, 44, 38, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 手机：底部进度条收窄，避免与右下「展画卷」按钮重叠 */
+  .hud {
+    width: 40vw;
+    min-width: 118px;
+  }
+
+  .view-btn {
+    padding: 8px 14px;
+  }
+
+  .topbar {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* 手机横屏 / 短视口：文案与场景抢高度——压缩底部文案，收起旁注 */
+@media (max-height: 480px) and (orientation: landscape) {
+  .topbar {
+    padding: 10px 20px;
+  }
+
+  .area {
+    padding-top: 5vh;
+  }
+
+  .bottom-copy {
+    left: 4vw;
+    right: 4vw;
+    bottom: 10px;
+    gap: 12px;
+  }
+
+  .eyebrow {
+    display: none;
+  }
+
+  /* 标题压成一行，给场景腾高度 */
+  .title {
+    font-size: clamp(18px, 6vh, 26px);
+    max-width: 20em;
+    line-height: 1.2;
+  }
+
+  .aside {
+    display: none;
+  }
+
+  .hud {
+    bottom: 12px;
+  }
+
+  .view-btn {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }

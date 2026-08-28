@@ -14,7 +14,7 @@ const CONFIG = {
   damping: 0.99,
   iterationsPerFrame: 5,
   compressFactor: 0.02,
-  stretchFactor: 1.5,
+  stretchFactor: 1.08,
   mouseSize: 5000,
   mouseStrength: 4,
   contain: false,
@@ -471,7 +471,19 @@ function measureBg() {
 }
 
 function sceneScale() {
-  const s = Math.min(1, (vw - 24) / SCENE_W);
+  let s = Math.min(1, (vw - 24) / SCENE_W);
+  /* 高度预算：诗帘在重力下会垂落到约 stretchFactor+0.05 倍配置高度，
+     按「顶栏padding + 底部文案实际占位」反算场景可用高度，
+     不够时整体缩小场景（手机/短视口/大屏低窗口），0.3 为下限 */
+  const stretch = Math.min(1.3, Math.max(1, CONFIG.stretchFactor + 0.05));
+  const totalH = BRIDGE_H + CLOTH_GAP + CONFIG.height * stretch + 12;
+  const areaPad = parseFloat(getComputedStyle(document.querySelector(".area")).paddingTop) || 0;
+  const copyEl = document.querySelector(".bottom-copy");
+  const copyBox = copyEl
+    ? copyEl.offsetHeight + (parseFloat(getComputedStyle(copyEl).bottom) || 0)
+    : 120;
+  const avail = window.innerHeight - areaPad - copyBox - 8;
+  if (totalH > avail) s = Math.min(s, Math.max(0.3, avail / totalH));
   scene.style.setProperty("--s", s);
 }
 
@@ -569,6 +581,8 @@ function rerender() {
   if (input) input.unbind();
   cancelAnimationFrame(rafID);
   main();
+  /* 布帘高度变化会影响场景总高（短视口下的缩放上限） */
+  sceneScale();
 }
 
 const panelApi = buildPanel({
