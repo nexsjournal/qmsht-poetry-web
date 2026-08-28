@@ -59,8 +59,8 @@ body {
   will-change: transform;
   user-select: none;
   -webkit-user-drag: none;
-  /* 默认接近透明：以虹桥与诗帘为主角；「展画卷」模式下恢复全幅 */
-  opacity: 0.16;
+  /* 默认轻透：隐约可见背景长卷；「展画卷」模式下恢复全幅 */
+  opacity: 0.2;
   transition: opacity 0.9s ease;
 }
 
@@ -329,6 +329,18 @@ body.panel-open .nav-btn--right {
   bottom: -30px;
   transform: translateX(-50%);
   width: 470px;
+  height: auto;
+}
+
+/* 人物：脚底与水线对齐（共用 211px 基线）。
+   renwu-web.png 已裁剪为纯人物条（1175×270），脚底 ≈ 图高 97.4%；
+   宽 720px → 图高 165px，底缘内收 4px，脚底与水线同高（≈202.5px） */
+.bridge .bridge__person {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  width: 720px;
   height: auto;
 }
 

@@ -5,10 +5,11 @@ import { buildPanel } from "./panel.js";
 
 /* ─── 参数（默认值对齐参考站面板截图） ─── */
 const CONFIG = {
-  width: 564,
-  height: 228,
-  gridW: 36,
-  gridH: 40,
+  /* 布帘默认几何：字号 ≈11px（格子 10.3px），容量 50×32=1600 ≥ 最长集合 1570 字 */
+  width: 600,
+  height: 320,
+  gridW: 50,
+  gridH: 32,
   gravity: 0.2,
   damping: 0.99,
   iterationsPerFrame: 5,
@@ -205,7 +206,7 @@ function main() {
   const root = document.getElementById("container");
   const canvasW = SCENE_W + PAD * 2;
   const canvasH = height + PAD * 2;
-  const fontSize = Math.max(9, Math.min(14, cellHeight * 0.95));
+  const fontSize = Math.max(11, Math.min(14, cellHeight * 0.95));
   const roofClearance = Math.ceil(fontSize * 0.7);
   const originX = PAD + (SCENE_W - width) / 2;
   const originY = PAD + roofClearance;
@@ -475,17 +476,22 @@ function sceneScale() {
 }
 
 /* 诗帘状态：背景自动慢移——从最右端（春郊起幅）缓慢移到最左端（汴城），
-   再移回右端，循环往复；单向约 AUTO_PAN_MS。展画卷状态归位右端并跟随用户滚动 */
-const AUTO_PAN_MS = 120000;
+   再移回右端，循环往复；单向约 AUTO_PAN_MS（很慢）。
+  展画卷状态同样自动移动；用户滚轮/方向键/横拖接管时以手动优先，
+  停止操作 AUTO_RESUME_MS 后从当前位置继续自动滚动。 */
+const AUTO_PAN_MS = 300000;
+const AUTO_RESUME_MS = 3000;
 let autoT = 0;
 let autoDir = 1;
 let lastPanTs = 0;
+let lastManualTs = 0;
 
 function panLoop(ts) {
   requestAnimationFrame(panLoop);
   if (lastPanTs) {
     const dt = Math.min(64, ts - lastPanTs);
-    if (!paintingMode) {
+    /* 诗帘态：始终自动；展画卷态：手动操作期间暂停，3 秒后从当前位置恢复 */
+    if (!paintingMode || ts - lastManualTs > AUTO_RESUME_MS) {
       autoT += (autoDir * dt) / AUTO_PAN_MS;
       if (autoT >= 1) {
         autoT = 1;
@@ -511,23 +517,31 @@ function setPan(t) {
   panTarget = Math.max(0, Math.min(1, t));
 }
 
+/* 手动展卷（滚轮/方向键/横拖）：以手动位置为准，自动相位同步到当前位置，
+   停止操作 AUTO_RESUME_MS 后自动滚动从这里继续，不跳变 */
+function manualPan(t) {
+  setPan(t);
+  autoT = panTarget;
+  lastManualTs = performance.now();
+}
+
 window.addEventListener(
   "wheel",
   (e) => {
     if (isUiEvent(e)) return;
-    /* 诗帘状态背景自动慢移，滚轮仅展画卷状态手动展卷 */
+    /* 诗帘状态背景自动慢移，滚轮仅展画卷状态可接管 */
     if (!paintingMode) return;
     e.preventDefault();
     const delta = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
-    setPan(panTarget + delta * 0.00045);
+    manualPan(panTarget + delta * 0.00045);
   },
   { passive: false }
 );
 
 window.addEventListener("keydown", (e) => {
   if (!paintingMode) return;
-  if (e.key === "ArrowRight") setPan(panTarget - 0.04);
-  if (e.key === "ArrowLeft") setPan(panTarget + 0.04);
+  if (e.key === "ArrowRight") manualPan(panTarget - 0.04);
+  if (e.key === "ArrowLeft") manualPan(panTarget + 0.04);
 });
 
 /* 触屏横拖展卷（不在布帘/UI 上时） */
@@ -541,7 +555,7 @@ window.addEventListener("pointerdown", (e) => {
 window.addEventListener("pointermove", (e) => {
   if (!touchPan || e.pointerType !== "touch") return;
   const span = Math.max(1, bgW - vw);
-  setPan(touchPan.t - (e.clientX - touchPan.x) / span);
+  manualPan(touchPan.t - (e.clientX - touchPan.x) / span);
 });
 window.addEventListener("pointerup", () => (touchPan = null));
 
@@ -600,10 +614,11 @@ function setPainting(on) {
   viewBtn.textContent = on ? "回诗帘" : "展画卷";
   viewBtn.setAttribute("aria-pressed", String(on));
   if (on) {
-    /* 背景归位最右端（春郊起幅），随后随用户滚动 */
+    /* 背景归位最右端（春郊起幅），随后自动慢移，用户滚动可随时接管 */
     panTarget = 0;
     autoT = 0;
     autoDir = 1;
+    lastManualTs = 0;
     bgm.play().catch(() => {});
     panelApi.setPanelOpen(false);
     panelBtn.setAttribute("aria-expanded", "false");
@@ -627,11 +642,12 @@ viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 ────────────────────────────────────────────────────────────── */
 const SWAP_MS = 780;
 const SWAP_EASE = "cubic-bezier(0.42, 0, 1, 1)";
-const SCENE_ORDER = ["bridge", "boat", "tower"];
+const SCENE_ORDER = ["bridge", "boat", "tower", "person"];
 const SCENE_META = {
   bridge: { name: "虹桥", icon: "assets/selector-bridge.png", collection: "qm" },
   boat: { name: "帆船", icon: "assets/selector-boat.png", collection: "ch" },
-  tower: { name: "城楼", icon: "assets/selector-tower.png", collection: "tq" }
+  tower: { name: "城楼", icon: "assets/selector-tower.png", collection: "tq" },
+  person: { name: "人物", icon: "assets/selector-person.png", collection: "all" }
 };
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
@@ -642,7 +658,8 @@ const nextBtnLabel = document.getElementById("nextBtnLabel");
 const sceneLayers = {
   bridge: [document.getElementById("bridgeImg"), document.querySelector(".bridge-front")],
   boat: [document.getElementById("boatImg")],
-  tower: [document.getElementById("towerImg")]
+  tower: [document.getElementById("towerImg")],
+  person: [document.getElementById("personImg")]
 };
 const bottomCopy = document.getElementById("bottomCopy");
 let sceneIdx = 0;
@@ -652,7 +669,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const sceneAt = (i) => SCENE_ORDER[((i % SCENE_ORDER.length) + SCENE_ORDER.length) % SCENE_ORDER.length];
 
 /* 预加载全部图标与大图，切换时不闪白 */
-[...Object.values(SCENE_META).map((m) => m.icon), "assets/chenglou-web.png"].forEach((src) => {
+[
+  ...Object.values(SCENE_META).map((m) => m.icon),
+  "assets/chenglou-web.png",
+  "assets/renwu-web.png"
+].forEach((src) => {
   const im = new Image();
   im.src = src;
 });
