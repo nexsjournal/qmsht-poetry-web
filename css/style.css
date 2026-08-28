@@ -261,9 +261,15 @@ body.panel-open .nav-btn--right {
   /* 窄屏下保持 720px 布局宽（仅靠 --s 缩放），
      防止 flex 收缩到 680px 导致桥/船/诗帘坐标错位 */
   flex: 0 0 720px;
-  /* --slide：桥/船切换时整体横滑（chimes 参考站同款），先缩放后平移 */
-  transform: translateX(var(--slide, 0px)) scale(var(--s, 1));
+  transform: scale(var(--s, 1));
   transform-origin: top center;
+}
+
+/* A/B 双缓冲图层：切换时旧层滑出与新层滑入同时走（走到一半即可看到新图） */
+.slide {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
 }
 
 /* 场景后的径向暗晕：把桥与诗帘从流动的画卷背景里托出来 */
@@ -333,12 +339,12 @@ body.panel-open .nav-btn--right {
 }
 
 /* 人物：脚底与水线对齐（共用 211px 基线）。
-   renwu-web.png 已裁剪为纯人物条（1175×270），脚底 ≈ 图高 97.4%；
-   宽 720px → 图高 165px，底缘内收 4px，脚底与水线同高（≈202.5px） */
+   renwu-web.png 为用户抠图裁剪的纯人物条（1175×267），脚底 ≈ 图高 98.1%；
+   宽 720px → 图高 164px，底缘内收 5px，脚底与水线同高（≈202.5px） */
 .bridge .bridge__person {
   position: absolute;
   left: 50%;
-  bottom: 4px;
+  bottom: 5px;
   transform: translateX(-50%);
   width: 720px;
   height: auto;
@@ -376,11 +382,6 @@ body.panel-open .nav-btn--right {
   background: radial-gradient(ellipse at center, rgba(48, 31, 15, 0.3), transparent 70%);
   pointer-events: none;
   transition: opacity 0.45s ease;
-}
-
-/* 船自带水面，去掉桥下的暗色投影（城楼的石基下保留作地面阴影） */
-body[data-scene="boat"] .bridge-shadow {
-  opacity: 0;
 }
 
 /* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(-14) = 197px；

@@ -64,34 +64,31 @@
 
       <main class="area">
         <div class="scene" id="scene">
-          <div class="bridge" id="bridgeBack">
-            <img id="bridgeImg" src="assets/hongqiao-back.png" alt="虹桥" />
-            <img
-              id="boatImg"
-              class="bridge__boat"
-              src="assets/fanchuan-web.png"
-              alt="汴河帆船"
-              hidden
-            />
-            <img
-              id="towerImg"
-              class="bridge__tower"
-              src="assets/chenglou-web.png"
-              alt="汴京城楼"
-              hidden
-            />
-            <img
-              id="personImg"
-              class="bridge__person"
-              src="assets/renwu-web.png"
-              alt="汴京人物"
-              hidden
-            />
+          <!-- A/B 双缓冲图层：切换时旧层滑出与新层滑入同时进行（重叠可见） -->
+          <div class="slide" id="slideA">
+            <div class="bridge">
+              <img class="bridge__back" src="assets/hongqiao-back.png" alt="虹桥" />
+              <img class="bridge__boat" src="assets/fanchuan-web.png" alt="汴河帆船" hidden />
+              <img class="bridge__tower" src="assets/chenglou-web.png" alt="汴京城楼" hidden />
+              <img class="bridge__person" src="assets/renwu-web.png" alt="汴京人物" hidden />
+            </div>
+            <div class="bridge-front" aria-hidden="true">
+              <img src="assets/hongqiao-front.png" alt="" />
+            </div>
+            <div class="bridge-shadow" aria-hidden="true"></div>
           </div>
-          <div class="bridge-front" aria-hidden="true">
-            <img src="assets/hongqiao-front.png" alt="" />
+          <div class="slide" id="slideB">
+            <div class="bridge">
+              <img class="bridge__back" src="assets/hongqiao-back.png" alt="" hidden />
+              <img class="bridge__boat" src="assets/fanchuan-web.png" alt="" hidden />
+              <img class="bridge__tower" src="assets/chenglou-web.png" alt="" hidden />
+              <img class="bridge__person" src="assets/renwu-web.png" alt="" hidden />
+            </div>
+            <div class="bridge-front" aria-hidden="true" hidden>
+              <img src="assets/hongqiao-front.png" alt="" />
+            </div>
+            <div class="bridge-shadow" aria-hidden="true" hidden></div>
           </div>
-          <div class="bridge-shadow" aria-hidden="true"></div>
           <div class="strings" id="container" aria-label="清明诗帘"></div>
         </div>
       </main>

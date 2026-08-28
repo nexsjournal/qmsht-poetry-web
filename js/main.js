@@ -655,12 +655,33 @@ const prevBtnIcon = document.getElementById("prevBtnIcon");
 const prevBtnLabel = document.getElementById("prevBtnLabel");
 const nextBtnIcon = document.getElementById("nextBtnIcon");
 const nextBtnLabel = document.getElementById("nextBtnLabel");
-const sceneLayers = {
-  bridge: [document.getElementById("bridgeImg"), document.querySelector(".bridge-front")],
-  boat: [document.getElementById("boatImg")],
-  tower: [document.getElementById("towerImg")],
-  person: [document.getElementById("personImg")]
+/* A/B 双缓冲图层：每张场景图在两层里各有一套，切换时旧层滑出、新层同时滑入 */
+const SLIDE_KEYS = ["back", "boat", "tower", "person", "front", "shadow"];
+const SLIDE_VIS = {
+  bridge: ["back", "front", "shadow"],
+  boat: ["boat"], // 船自带水面，不带地面阴影
+  tower: ["tower", "shadow"],
+  person: ["person", "shadow"]
 };
+function readSlide(el) {
+  const s = { el };
+  s.back = el.querySelector(".bridge__back");
+  s.boat = el.querySelector(".bridge__boat");
+  s.tower = el.querySelector(".bridge__tower");
+  s.person = el.querySelector(".bridge__person");
+  s.front = el.querySelector(".bridge-front");
+  s.shadow = el.querySelector(".bridge-shadow");
+  return s;
+}
+const slides = [
+  readSlide(document.getElementById("slideA")),
+  readSlide(document.getElementById("slideB"))
+];
+let activeSlide = 0;
+function setLayer(slide, id) {
+  const vis = SLIDE_VIS[id];
+  for (const k of SLIDE_KEYS) slide[k].hidden = !vis.includes(k);
+}
 const bottomCopy = document.getElementById("bottomCopy");
 let sceneIdx = 0;
 let swapping = false;
@@ -691,15 +712,11 @@ function updateNav() {
   document.body.dataset.scene = sceneAt(sceneIdx);
 }
 
-function swapLayers(idx) {
-  const nextId = sceneAt(idx);
-  for (const [id, layers] of Object.entries(sceneLayers)) {
-    const on = id === nextId;
-    layers.forEach((el) => (el.hidden = !on));
-  }
-  /* 每张图配自己的诗帘：虹桥=清明·寒食、帆船=春江·烟柳、城楼=踏青·寻春。
-     此时场景已滑出屏幕（opacity 0.25 之外），重建不可见 */
-  CONFIG.collection = SCENE_META[nextId].collection;
+/* 新图走到一半时更新诗帘与按钮（每张图配自己的诗帘：qm/ch/tq/全卷） */
+function swapCurtain() {
+  const id = sceneAt(sceneIdx);
+  document.body.dataset.scene = id;
+  CONFIG.collection = SCENE_META[id].collection;
   panelApi.panel.querySelector("select").value = CONFIG.collection;
   rerender();
   updateNav();
@@ -711,31 +728,39 @@ async function goScene(delta) {
   prevBtn.disabled = true;
   nextBtn.disabled = true;
   const targetIdx = (sceneIdx + delta + SCENE_ORDER.length) % SCENE_ORDER.length;
-  /* delta=+1（右按钮·下一张）：新图从右进场 → 场景向左滑出（dir=-1）
-     delta=-1（左按钮·上一张）：新图从左进场 → 场景向右滑出（dir=+1） */
+  /* delta=+1（右按钮·下一张）：新图从右进场 → 旧层向左滑出（dir=-1）
+     delta=-1（左按钮·上一张）：新图从左进场 → 旧层向右滑出（dir=+1）
+     900px 为场景坐标（场景宽 720px），保证整层完全滑出屏幕 */
   const dir = -delta;
-  const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}, opacity ${SWAP_MS}ms ${SWAP_EASE}`;
+  const SLIDE_OUT = 900;
+  const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}`;
+  const fromS = slides[activeSlide];
+  const toS = slides[1 - activeSlide];
+
+  /* 新图放入空闲层，置于进场侧屏外；旧层与新层同时滑动（重叠可见） */
+  setLayer(toS, sceneAt(targetIdx));
+  fromS.el.style.transition = "none";
+  toS.el.style.transition = "none";
+  fromS.el.style.transform = "translateX(0px)";
+  toS.el.style.transform = `translateX(${-SLIDE_OUT * dir}px)`;
+  toS.el.style.zIndex = 6;
 
   bottomCopy.classList.add("is-dipping");
-  scene.style.transition = trans;
-  scene.style.setProperty("--slide", `${110 * dir}vw`);
-  scene.style.opacity = "0.25";
+  void toS.el.offsetWidth;
+  fromS.el.style.transition = trans;
+  toS.el.style.transition = trans;
+  fromS.el.style.transform = `translateX(${SLIDE_OUT * dir}px)`;
+  toS.el.style.transform = "translateX(0px)";
 
-  await sleep(SWAP_MS * 0.78);
+  await sleep(SWAP_MS * 0.5);
 
+  /* 新图走到一半：诗帘/按钮/场景数据同步切换 */
   sceneIdx = targetIdx;
-  swapLayers(sceneIdx);
+  swapCurtain();
 
-  scene.style.transition = "none";
-  scene.style.setProperty("--slide", `${-110 * dir}vw`);
-  void scene.offsetWidth;
-  scene.style.transition = trans;
-  scene.style.setProperty("--slide", "0px");
-  scene.style.opacity = "1";
-
-  await sleep(SWAP_MS);
-  scene.style.transition = "";
-  scene.style.opacity = "";
+  await sleep(SWAP_MS * 0.5);
+  fromS.el.style.zIndex = "";
+  activeSlide = 1 - activeSlide;
   bottomCopy.classList.remove("is-dipping");
   swapping = false;
   prevBtn.disabled = false;
