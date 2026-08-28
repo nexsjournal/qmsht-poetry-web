@@ -332,6 +332,13 @@ function main() {
         for (let j = 0; j < constraintsArr.length; j++) constraintsArr[j].solve();
       }
       if (CONFIG.contain) for (const p of particles) p.contain();
+      /* 安全钳：粒子纵坐标永不超过 1.55 倍配置高度。
+         正常垂落（约 1.1 倍）不触发；任何物理失控（高刷/卡顿/外力）
+         都不会把布帘拉成尖条 */
+      const maxY = CONFIG.height * 1.55;
+      for (const p of particles) {
+        if (!p.pinned && p.pos.y > maxY) p.pos.y = maxY;
+      }
       acc -= STEP;
       steps++;
     }
@@ -494,7 +501,7 @@ function layoutMetrics() {
   const copyBox = copyEl
     ? copyEl.offsetHeight + (parseFloat(getComputedStyle(copyEl).bottom) || 0)
     : 120;
-  return { area, avail: window.innerHeight - areaPad - copyBox - 8 };
+  return { area, areaPad, avail: window.innerHeight - areaPad - copyBox - 8 };
 }
 function autoClothHeight() {
   if (userSetClothHeight) return false;
@@ -526,12 +533,22 @@ function sceneScale() {
      不够时整体缩小场景（手机/短视口/大屏低窗口），0.3 为下限 */
   const stretch = Math.min(1.3, Math.max(1, CONFIG.stretchFactor + 0.05));
   const totalH = BRIDGE_H + CLOTH_GAP + CONFIG.height * stretch + 12;
-  const { area, avail } = layoutMetrics();
+  const { area, areaPad, avail } = layoutMetrics();
   if (totalH > avail) s = Math.min(s, Math.max(0.3, avail / totalH));
   scene.style.setProperty("--s", s);
   /* 垂直富余（高视口）：约 45% 补到场景上方，画面上下留白均衡 */
   const extra = Math.max(0, (avail - totalH * s) * 0.45);
   area.style.setProperty("--pad-extra", Math.round(extra) + "px");
+  /* 手机：切换钮定位到桥体上（场景 y≈88，诗帘 197 之上），
+     不悬在密字上；桌面保持 CSS 默认 34% */
+  if (vw <= 760) {
+    const t = Math.round(areaPad + extra + 88 * s);
+    prevBtn.style.top = t + "px";
+    nextBtn.style.top = t + "px";
+  } else {
+    prevBtn.style.top = "";
+    nextBtn.style.top = "";
+  }
 }
 
 /* 诗帘状态：背景自动慢移——从最右端（春郊起幅）缓慢移到最左端（汴城），

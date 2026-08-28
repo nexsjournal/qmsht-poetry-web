@@ -37,6 +37,7 @@ body {
   font-family: var(--font-serif);
   color: var(--ink);
   overflow: hidden;
+  overscroll-behavior: none;
   background: linear-gradient(180deg, #e9dcc2, #ddc9a4);
   -webkit-font-smoothing: antialiased;
 }
@@ -69,11 +70,12 @@ body[data-mode="painting"] #bgImg {
   opacity: 1;
 }
 
+/* fixed 锁死舞台：任何情况下文档都不可纵向滚动
+   （手机浏览器缩放/内核差异下 100dvh 失效也不会露出滚动条） */
 .stage {
-  position: relative;
+  position: fixed;
+  inset: 0;
   z-index: 1;
-  height: 100vh;
-  height: 100dvh;
 }
 
 /* ─── 顶栏 ─── */
@@ -956,20 +958,26 @@ body[data-mode="painting"] .nav-btn {
     max-width: 260px;
   }
 
-  /* 手机：诗帘几乎占满屏宽，切换钮压在密字上看不清——
-     给按钮加纸色底 + 投影，恢复「卡片感」 */
+  /* 手机：切换钮缩小一号，纸色底 + 投影（top 由 JS 定位到桥面上） */
   .nav-btn {
+    width: 68px;
+    height: 68px;
     background-image:
-      linear-gradient(rgba(246, 239, 227, 0.92), rgba(243, 234, 217, 0.92)),
+      linear-gradient(rgba(246, 239, 227, 0.94), rgba(243, 234, 217, 0.94)),
       url("../assets/selector-frame.svg");
     background-size:
-      60px 60px,
-      84px 84px;
+      52px 52px,
+      72px 72px;
     background-position: center, center;
-    box-shadow: 0 4px 14px rgba(58, 44, 38, 0.3);
+    box-shadow: 0 4px 14px rgba(58, 44, 38, 0.32);
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-btn .country-btn__icon {
+    width: 56px;
+    height: 18px;
   }
 
   /* 手机：底部进度条收窄，避免与右下「展画卷」按钮重叠 */
