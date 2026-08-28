@@ -320,15 +320,15 @@ body.panel-open .nav-btn--right {
 }
 
 /* 城楼：与桥底对齐（共用 211px 基线）。
-   chenglou-web.png 内容底（石基底）≈ 图高 89.1%；
-   宽 500px → 图高 375px，底缘外扩 32px，使石基底与水线同高（≈202.5px），
-   屋脊顶高出场景顶约 102px（13vh 场景顶之下仍完整可见） */
+   chenglou-web.png 内容底（石基底）≈ 图高 89.1%、内容顶（宝顶）≈ 图高 5.2%；
+   宽 470px → 图高 352px，底缘外扩 30px，使石基底与水线同高（≈202.5px），
+   宝顶距视口顶约 24px（900px 屏，完整可见） */
 .bridge .bridge__tower {
   position: absolute;
   left: 50%;
-  bottom: -32px;
+  bottom: -30px;
   transform: translateX(-50%);
-  width: 500px;
+  width: 470px;
   height: auto;
 }
 
