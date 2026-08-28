@@ -315,20 +315,30 @@ function main() {
     }
   }
 
+  /* 定步长物理（60Hz 基准）：累加真实帧间隔、每 16.67ms 推进一步。
+     120Hz 屏每帧只积累 8.3ms（平均两步一推），慢帧最多补 3 步——
+     垂落长度与刷新率无关，避免高刷手机把布帘拉长撕开 */
+  const STEP = 1000 / 60;
   let lastDelta = performance.now();
+  let acc = 0;
   function runloop(delta) {
     rafID = requestAnimationFrame(runloop);
-    const dt = Math.min(32, Math.max(1, delta - lastDelta));
+    acc += Math.min(50, delta - lastDelta);
     lastDelta = delta;
+    let steps = 0;
+    while (acc >= STEP && steps < 3) {
+      for (const p of particles) p.update(STEP);
+      for (let i = 0; i < iterationsPerFrame; i++) {
+        for (let j = 0; j < constraintsArr.length; j++) constraintsArr[j].solve();
+      }
+      if (CONFIG.contain) for (const p of particles) p.contain();
+      acc -= STEP;
+      steps++;
+    }
+    if (steps === 3) acc = 0; // 后台切回：丢弃积压，防猛坠
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, canvasW, canvasH);
-
-    for (const p of particles) p.update(dt);
-    for (let i = 0; i < iterationsPerFrame; i++) {
-      for (let j = 0; j < constraintsArr.length; j++) constraintsArr[j].solve();
-    }
-    if (CONFIG.contain) for (const p of particles) p.contain();
 
     drawCode();
   }
@@ -470,6 +480,45 @@ function measureBg() {
   bgW = bgImg.offsetWidth || 0;
 }
 
+/* 高视口（大屏/高手机）：宽度不占满垂直空间时，自动加长布帘填满空隙
+   （格子变高 → 字号随之增大，上限 14px 对应高 458）。
+   用户手动改过「高度」后不再自动加长 */
+const CLOTH_MAX = 458;
+let userSetClothHeight = false;
+function layoutMetrics() {
+  const area = document.querySelector(".area");
+  /* 基础 padding 不含 JS 追加的 --pad-extra，避免反馈循环 */
+  const extraNow = parseFloat(area.style.getPropertyValue("--pad-extra")) || 0;
+  const areaPad = Math.max(0, (parseFloat(getComputedStyle(area).paddingTop) || 0) - extraNow);
+  const copyEl = document.querySelector(".bottom-copy");
+  const copyBox = copyEl
+    ? copyEl.offsetHeight + (parseFloat(getComputedStyle(copyEl).bottom) || 0)
+    : 120;
+  return { area, avail: window.innerHeight - areaPad - copyBox - 8 };
+}
+function autoClothHeight() {
+  if (userSetClothHeight) return false;
+  const sW = Math.min(1, (vw - 24) / SCENE_W);
+  const stretch = Math.min(1.3, Math.max(1, CONFIG.stretchFactor + 0.05));
+  const maxFinal = layoutMetrics().avail / Math.max(sW, 0.3) - (BRIDGE_H + CLOTH_GAP + 12);
+  const target = Math.min(CLOTH_MAX, Math.round(maxFinal / stretch));
+  if (target > CONFIG.height + 2) {
+    CONFIG.height = target;
+    /* 同步面板滑杆显示 */
+    const row = [...document.querySelectorAll("#panel .prow")].find((r) =>
+      (r.querySelector(".plabel")?.textContent || "").includes("高度")
+    );
+    if (row) {
+      const inp = row.querySelector("input");
+      if (inp) inp.value = CONFIG.height;
+      const val = row.querySelector(".pval");
+      if (val) val.textContent = String(CONFIG.height);
+    }
+    return true;
+  }
+  return false;
+}
+
 function sceneScale() {
   let s = Math.min(1, (vw - 24) / SCENE_W);
   /* 高度预算：诗帘在重力下会垂落到约 stretchFactor+0.05 倍配置高度，
@@ -477,14 +526,12 @@ function sceneScale() {
      不够时整体缩小场景（手机/短视口/大屏低窗口），0.3 为下限 */
   const stretch = Math.min(1.3, Math.max(1, CONFIG.stretchFactor + 0.05));
   const totalH = BRIDGE_H + CLOTH_GAP + CONFIG.height * stretch + 12;
-  const areaPad = parseFloat(getComputedStyle(document.querySelector(".area")).paddingTop) || 0;
-  const copyEl = document.querySelector(".bottom-copy");
-  const copyBox = copyEl
-    ? copyEl.offsetHeight + (parseFloat(getComputedStyle(copyEl).bottom) || 0)
-    : 120;
-  const avail = window.innerHeight - areaPad - copyBox - 8;
+  const { area, avail } = layoutMetrics();
   if (totalH > avail) s = Math.min(s, Math.max(0.3, avail / totalH));
   scene.style.setProperty("--s", s);
+  /* 垂直富余（高视口）：约 45% 补到场景上方，画面上下留白均衡 */
+  const extra = Math.max(0, (avail - totalH * s) * 0.45);
+  area.style.setProperty("--pad-extra", Math.round(extra) + "px");
 }
 
 /* 诗帘状态：背景自动慢移——从最右端（春郊起幅）缓慢移到最左端（汴城），
@@ -573,7 +620,8 @@ window.addEventListener("pointerup", () => (touchPan = null));
 
 window.addEventListener("resize", () => {
   measureBg();
-  sceneScale();
+  if (autoClothHeight()) rerender(); // 布帘加长（rerender 内含 sceneScale）
+  else sceneScale();
 });
 
 /* ─── 面板 ─── */
@@ -597,6 +645,13 @@ const panelApi = buildPanel({
     chimes.setVolume(CONFIG.chimeVolume);
     chimes.enabled = CONFIG.chimes;
     updateConstraintRanges();
+  }
+});
+
+/* 用户手动改过「高度」→ 尊重其选择，不再自动加长布帘 */
+[...panelApi.panel.querySelectorAll(".prow")].forEach((r) => {
+  if ((r.querySelector(".plabel")?.textContent || "").includes("高度")) {
+    r.querySelector("input")?.addEventListener("change", () => (userSetClothHeight = true));
   }
 });
 
@@ -818,6 +873,7 @@ async function init() {
     /* 字体失败则用回退字体 */
   }
   main();
+  if (autoClothHeight()) rerender(); // 高视口：加长布帘再重排
   requestAnimationFrame(panLoop);
 }
 

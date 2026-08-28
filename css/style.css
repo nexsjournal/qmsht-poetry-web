@@ -253,8 +253,9 @@ body.panel-open .nav-btn--right {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  /* 桥/船 + 诗帘整体下移：给桅杆与顶栏留出空间，远离底部文案 */
-  padding-top: 13vh;
+  /* 桥/船 + 诗帘整体下移：给桅杆与顶栏留出空间，远离底部文案；
+     --pad-extra 由 JS 计算：垂直富余空间的一部分补到上方（高视口居中） */
+  padding-top: calc(13vh + var(--pad-extra, 0px));
 }
 
 .scene {
@@ -912,7 +913,7 @@ body[data-mode="painting"] .nav-btn {
   }
 
   .area {
-    padding-top: 10vh;
+    padding-top: calc(10vh + var(--pad-extra, 0px));
   }
 
   .bottom-copy {
@@ -994,7 +995,7 @@ body[data-mode="painting"] .nav-btn {
   }
 
   .area {
-    padding-top: 5vh;
+    padding-top: calc(5vh + var(--pad-extra, 0px));
   }
 
   .bottom-copy {
