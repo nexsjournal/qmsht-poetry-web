@@ -575,67 +575,83 @@ function setPainting(on) {
 }
 viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 
-/* ─── 场景切换：虹桥 → 帆船 → 城楼 → 虹桥…（过渡仿 chimes 参考站：
-   场景横滑离场 → 换图 → 反向滑入）───────────────────────────────
-   规则（新增图片沿用）：
+/* ─── 场景切换：左右双按钮常显，顺序循环 ────────────────────────
+   （过渡仿 chimes 参考站：场景横滑离场 → 换图 → 反向滑入）
+   顺序：虹桥 → 帆船 → 城楼 → 虹桥…（SCENE_ORDER，末页自动轮转回第一页）
+   - 左按钮=上一张（新图从左侧进场），右按钮=下一张（新图从右侧进场），两边始终同时显示
    - 每张大图底部对齐同一基线（CSS 中各自 bottom 校准）
-   - 按钮显示「下一张」的图标/名称，并站在其进场侧（dir=+1 左进场在左，-1 右进场在右）
    - 每张图配自己的诗帘篇目
+   新增图片：SCENE_ORDER 加一项 + SCENE_META 加一项 + HTML 加一层 + CSS 加一条基线，
+   左右按钮与循环顺序自动适配。
 ────────────────────────────────────────────────────────────── */
 const SWAP_MS = 780;
 const SWAP_EASE = "cubic-bezier(0.42, 0, 1, 1)";
-const SCENES = {
-  bridge: { next: "boat",   dir: 1,  name: "帆船", icon: "assets/selector-boat.png",   collection: "qm" },
-  boat:   { next: "tower",  dir: -1, name: "城楼", icon: "assets/selector-tower.png",  collection: "ch" },
-  tower:  { next: "bridge", dir: 1,  name: "虹桥", icon: "assets/selector-bridge.png", collection: "tq" }
+const SCENE_ORDER = ["bridge", "boat", "tower"];
+const SCENE_META = {
+  bridge: { name: "虹桥", icon: "assets/selector-bridge.png", collection: "qm" },
+  boat: { name: "帆船", icon: "assets/selector-boat.png", collection: "ch" },
+  tower: { name: "城楼", icon: "assets/selector-tower.png", collection: "tq" }
 };
-const bridgeBtn = document.getElementById("bridgeBtn");
-const bridgeBtnIcon = document.getElementById("bridgeBtnIcon");
-const bridgeBtnLabel = document.getElementById("bridgeBtnLabel");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const prevBtnIcon = document.getElementById("prevBtnIcon");
+const prevBtnLabel = document.getElementById("prevBtnLabel");
+const nextBtnIcon = document.getElementById("nextBtnIcon");
+const nextBtnLabel = document.getElementById("nextBtnLabel");
 const sceneLayers = {
   bridge: [document.getElementById("bridgeImg"), document.querySelector(".bridge-front")],
   boat: [document.getElementById("boatImg")],
   tower: [document.getElementById("towerImg")]
 };
 const bottomCopy = document.getElementById("bottomCopy");
-let sceneId = "bridge";
+let sceneIdx = 0;
 let swapping = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/* 取第 i 个场景（负数/越界自动轮转） */
+const sceneAt = (i) => SCENE_ORDER[((i % SCENE_ORDER.length) + SCENE_ORDER.length) % SCENE_ORDER.length];
 
 /* 预加载全部图标与大图，切换时不闪白 */
-[...Object.values(SCENES).map((s) => s.icon), "assets/chenglou-web.png"].forEach((src) => {
+[...Object.values(SCENE_META).map((m) => m.icon), "assets/chenglou-web.png"].forEach((src) => {
   const im = new Image();
   im.src = src;
 });
 
-function swapLayers(nextId, dir) {
+/* 双按钮常显：左=上一张，右=下一张（循环） */
+function updateNav() {
+  const prevMeta = SCENE_META[sceneAt(sceneIdx - 1)];
+  const nextMeta = SCENE_META[sceneAt(sceneIdx + 1)];
+  prevBtnIcon.src = prevMeta.icon;
+  prevBtnLabel.textContent = prevMeta.name;
+  prevBtn.setAttribute("aria-label", `上一张：${prevMeta.name}`);
+  nextBtnIcon.src = nextMeta.icon;
+  nextBtnLabel.textContent = nextMeta.name;
+  nextBtn.setAttribute("aria-label", `下一张：${nextMeta.name}`);
+  document.body.dataset.scene = sceneAt(sceneIdx);
+}
+
+function swapLayers(idx) {
+  const nextId = sceneAt(idx);
   for (const [id, layers] of Object.entries(sceneLayers)) {
     const on = id === nextId;
     layers.forEach((el) => (el.hidden = !on));
   }
-  const next = SCENES[nextId];
-  /* 按钮显示「目标」：当前场景下指向下一张图 */
-  bridgeBtnIcon.src = next.icon;
-  bridgeBtnLabel.textContent = next.name;
-  bridgeBtn.setAttribute("aria-pressed", String(sceneId !== "bridge"));
-  bridgeBtn.setAttribute("aria-label", `切换到${next.name}`);
-  document.body.dataset.scene = nextId;
-  /* 按钮站位在「按钮所指目标（下一张图）的进场侧」：
-     用 SCENES[nextId].dir（下一次点击时目标图的方向），而非刚完成切换的 dir */
-  bridgeBtn.classList.toggle("country-btn--right", SCENES[nextId].dir < 0);
   /* 每张图配自己的诗帘：虹桥=清明·寒食、帆船=春江·烟柳、城楼=踏青·寻春。
      此时场景已滑出屏幕（opacity 0.25 之外），重建不可见 */
-  CONFIG.collection = SCENES[nextId].collection;
+  CONFIG.collection = SCENE_META[nextId].collection;
   panelApi.panel.querySelector("select").value = CONFIG.collection;
   rerender();
+  updateNav();
 }
 
-async function toggleScene() {
+async function goScene(delta) {
   if (swapping) return;
   swapping = true;
-  bridgeBtn.disabled = true;
-  const nextId = SCENES[sceneId].next;
-  const dir = SCENES[sceneId].dir; // +1：目标从左进场；-1：目标从右进场
+  prevBtn.disabled = true;
+  nextBtn.disabled = true;
+  const targetIdx = (sceneIdx + delta + SCENE_ORDER.length) % SCENE_ORDER.length;
+  /* delta=+1（右按钮·下一张）：新图从右进场 → 场景向左滑出（dir=-1）
+     delta=-1（左按钮·上一张）：新图从左进场 → 场景向右滑出（dir=+1） */
+  const dir = -delta;
   const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}, opacity ${SWAP_MS}ms ${SWAP_EASE}`;
 
   bottomCopy.classList.add("is-dipping");
@@ -645,8 +661,8 @@ async function toggleScene() {
 
   await sleep(SWAP_MS * 0.78);
 
-  sceneId = nextId;
-  swapLayers(nextId, dir);
+  sceneIdx = targetIdx;
+  swapLayers(sceneIdx);
 
   scene.style.transition = "none";
   scene.style.setProperty("--slide", `${-110 * dir}vw`);
@@ -660,9 +676,12 @@ async function toggleScene() {
   scene.style.opacity = "";
   bottomCopy.classList.remove("is-dipping");
   swapping = false;
-  bridgeBtn.disabled = false;
+  prevBtn.disabled = false;
+  nextBtn.disabled = false;
 }
-bridgeBtn.addEventListener("click", toggleScene);
+prevBtn.addEventListener("click", () => goScene(-1));
+nextBtn.addEventListener("click", () => goScene(1));
+updateNav();
 
 /* ─── About ─── */
 const aboutModal = document.getElementById("aboutModal");
@@ -706,7 +725,7 @@ window.__qmsht = {
   getPanCur: () => panCur,
   chimes,
   get sceneId() {
-    return sceneId;
+    return sceneAt(sceneIdx);
   },
-  toggleScene
+  goScene
 };
