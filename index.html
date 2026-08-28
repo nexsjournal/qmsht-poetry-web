@@ -31,15 +31,23 @@
           清明 · 虹桥
           <span class="brand__sub">Along the River during the Qingming Festival</span>
         </div>
-        <div class="topbar__actions">
-          <button type="button" class="ui-btn" id="bridgeBtn" aria-pressed="false" aria-label="切换虹桥 / 帆船">
-            帆船
-          </button>
-          <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
-            音律
-          </button>
-        </div>
+        <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
+          音律
+        </button>
       </header>
+
+      <button
+        type="button"
+        class="country-btn"
+        id="bridgeBtn"
+        aria-pressed="false"
+        aria-label="切换到帆船"
+      >
+        <span class="country-btn__icon" aria-hidden="true">
+          <img id="bridgeBtnIcon" src="assets/selector-boat.png" alt="" />
+        </span>
+        <span class="country-btn__label" id="bridgeBtnLabel">帆船</span>
+      </button>
 
       <div class="panel-anchor" id="panelAnchor"></div>
 

@@ -583,6 +583,8 @@ viewBtn.addEventListener("click", () => setPainting(!paintingMode));
 const SWAP_MS = 780;
 const SWAP_EASE = "cubic-bezier(0.42, 0, 1, 1)";
 const bridgeBtn = document.getElementById("bridgeBtn");
+const bridgeBtnIcon = document.getElementById("bridgeBtnIcon");
+const bridgeBtnLabel = document.getElementById("bridgeBtnLabel");
 const bridgeImg = document.getElementById("bridgeImg");
 const bridgeFront = document.querySelector(".bridge-front");
 const boatImg = document.getElementById("boatImg");
@@ -591,12 +593,22 @@ let isBoat = false;
 let swapping = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* 预加载两套图标，切换时不闪白 */
+["assets/selector-boat.png", "assets/selector-bridge.png"].forEach((src) => {
+  const im = new Image();
+  im.src = src;
+});
+
 function swapLayers(boat) {
   bridgeImg.hidden = boat;
   bridgeFront.hidden = boat;
   boatImg.hidden = !boat;
-  bridgeBtn.textContent = boat ? "虹桥" : "帆船";
+  /* 按钮显示「目标」：船模式显示虹桥，桥模式显示帆船 */
+  bridgeBtnIcon.src = boat ? "assets/selector-bridge.png" : "assets/selector-boat.png";
+  bridgeBtnLabel.textContent = boat ? "虹桥" : "帆船";
   bridgeBtn.setAttribute("aria-pressed", String(boat));
+  bridgeBtn.setAttribute("aria-label", boat ? "切换到虹桥" : "切换到帆船");
+  document.body.dataset.bridge = boat ? "boat" : "bridge";
   /* 行人只走在虹桥上：船模式或展画卷模式下暂停，回桥且诗帘模式时恢复 */
   if (pedestrians) {
     if (boat || paintingMode) pedestrians.pause();
@@ -607,6 +619,7 @@ function swapLayers(boat) {
 async function toggleBoat() {
   if (swapping) return;
   swapping = true;
+  bridgeBtn.disabled = true;
   const boat = !isBoat;
   const dir = boat ? 1 : -1; // 船：右出左进；桥：左出右进
   const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}, opacity ${SWAP_MS}ms ${SWAP_EASE}`;
@@ -633,6 +646,7 @@ async function toggleBoat() {
   scene.style.opacity = "";
   bottomCopy.classList.remove("is-dipping");
   swapping = false;
+  bridgeBtn.disabled = false;
 }
 bridgeBtn.addEventListener("click", toggleBoat);
 
