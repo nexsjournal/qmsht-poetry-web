@@ -26,7 +26,7 @@ const CONFIG = {
 const SCENE_W = 720;
 const PAD = 300; // 布帘画布四周留白（摆动不裁切）
 const BRIDGE_H = 211;
-const CLOTH_GAP = -26; // 负值：诗帘顶端伸入桥图水面之下，水盖住一点点字
+const CLOTH_GAP = -14; // 负值：诗帘顶端伸入桥图水面之下，水盖住一点点字
 
 const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -193,7 +193,7 @@ function sizeCanvas(canvas, cssW, cssH) {
 }
 
 const FONT =
-  '"Noto Serif SC", "Songti SC", "STSong", "SimSun", serif';
+  '"迫真打字油印体", "Songti SC", "STSong", "SimSun", serif';
 
 function main() {
   const width = CONFIG.width;
@@ -220,7 +220,7 @@ function main() {
     off._size = size;
     const octx = off.getContext("2d");
     octx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    octx.font = `600 ${fontSize}px ${FONT}`;
+    octx.font = `400 ${fontSize}px ${FONT}`;
     octx.textAlign = "center";
     octx.textBaseline = "middle";
     octx.fillStyle = "#241f18";
@@ -592,10 +592,7 @@ async function init() {
   measureBg();
   sceneScale();
   try {
-    await Promise.all([
-      document.fonts.load(`400 ${9}px "Noto Serif SC"`),
-      document.fonts.load(`600 ${9}px "Noto Serif SC"`)
-    ]);
+    await document.fonts.load(`400 9px "迫真打字油印体"`);
   } catch (_) {
     /* 字体失败则用回退字体 */
   }

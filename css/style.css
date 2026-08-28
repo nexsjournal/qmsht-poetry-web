@@ -1,3 +1,12 @@
+@font-face {
+  font-family: "迫真打字油印体";
+  src: url("../assets/fonts/real-typewriter.woff2") format("woff2");
+  /* 单字重文件（Light），声明全字重区间避免浏览器假粗 */
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --ink: #2a2620;
   --cloth-ink: #241f18;
@@ -9,8 +18,8 @@
   --head: #eadfca;
   --muted: #6b5847;
   --cream: #f3ead9;
-  --font-serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  --font-display: "ZCOOL XiaoWei", "Noto Serif SC", "Songti SC", serif;
+  --font-serif: "迫真打字油印体", "Songti SC", "STSong", "SimSun", serif;
+  --font-display: "迫真打字油印体", "Songti SC", "STSong", serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
@@ -198,13 +207,13 @@ body[data-mode="painting"] #bgImg {
   pointer-events: none;
 }
 
-/* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(-26) = 185px；
-   画布含 PAD(300) 四周留白。诗帘顶行钉在 185+7=192px，
+/* 与 main.js 常量对齐：strings 顶 = BRIDGE_H(211) + CLOTH_GAP(-14) = 197px；
+   画布含 PAD(300) 四周留白。诗帘顶行钉在 197+7=204px，
    被桥图水面（0–211px）盖住一点点，图在字上层 */
 .strings {
   position: absolute;
   left: 0;
-  top: 185px;
+  top: 197px;
   width: 720px;
   height: 0;
   z-index: 2;
