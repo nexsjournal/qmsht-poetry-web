@@ -687,12 +687,34 @@ new MutationObserver(() => {
 
 /* ─── 展画卷 / 回诗帘 ─── */
 const viewBtn = document.getElementById("viewBtn");
-const scrollHint = document.querySelector(".scroll-hint");
 
-/* 展画卷背景音（汴河）：进入展画卷自动播放，回诗帘暂停（保留进度，再进续播） */
+/* 背景音乐（汴河）：诗帘 / 展画卷两种模式都播放，顶栏「音乐」按钮控制开关。
+   浏览器自动播放策略下页面加载不能直接播，等首次用户手势后启动；
+   切换模式不打断音乐，关掉再开从当前进度续播 */
 const bgm = new Audio("assets/bianhe.mp3");
 bgm.loop = true;
 bgm.volume = 0.5;
+let musicOn = true;
+const musicBtn = document.getElementById("musicBtn");
+function applyMusic() {
+  if (musicOn) bgm.play().catch(() => {});
+  else bgm.pause();
+}
+musicBtn.addEventListener("click", () => {
+  musicOn = !musicOn;
+  musicBtn.setAttribute("aria-pressed", String(musicOn));
+  musicBtn.classList.toggle("is-off", !musicOn);
+  musicBtn.setAttribute("aria-label", musicOn ? "关闭背景音乐" : "开启背景音乐");
+  applyMusic();
+});
+/* 首次点击/按键后启动 BGM（用户已关掉则不启动） */
+function gestureStart() {
+  window.removeEventListener("pointerdown", gestureStart);
+  window.removeEventListener("keydown", gestureStart);
+  applyMusic();
+}
+window.addEventListener("pointerdown", gestureStart);
+window.addEventListener("keydown", gestureStart);
 
 function setPainting(on) {
   paintingMode = on;
@@ -705,12 +727,10 @@ function setPainting(on) {
     autoT = 0;
     autoDir = 1;
     lastManualTs = 0;
-    bgm.play().catch(() => {});
     panelApi.setPanelOpen(false);
     panelBtn.setAttribute("aria-expanded", "false");
     if (!aboutModal.hidden) setAboutOpen(false);
   } else {
-    bgm.pause();
     /* 回诗帘：自动慢移从当前位置接续，不跳变 */
     autoT = panCur;
   }
@@ -727,13 +747,45 @@ viewBtn.addEventListener("click", () => setPainting(!paintingMode));
    左右按钮与循环顺序自动适配。
 ────────────────────────────────────────────────────────────── */
 const SWAP_MS = 780;
-const SWAP_EASE = "cubic-bezier(0.42, 0, 1, 1)";
+/* ease-in（慢起快收）：旧图先缓缓离位、后段快速甩出；
+   旧层透明度延迟 400ms 再淡出 380ms（400+380=780，与位移同步收尾）——
+   屏幕里几乎保持不透明，快移出屏幕范围时才渐隐到 0；
+   新层同缓动入场，100ms 后淡入 500ms，落位前已完全可见 */
+const EASE_MOVE = "cubic-bezier(0.45, 0, 1, 1)";
+const OUT_FADE = "opacity 380ms cubic-bezier(0.4, 0, 1, 1) 400ms";
+const IN_FADE = "opacity 500ms cubic-bezier(0.4, 0, 1, 1) 100ms";
 const SCENE_ORDER = ["bridge", "boat", "tower", "person"];
+/* 每个场景一套文案：name 用于按钮，eyebrow/title 用于左上品牌与左下引子
+   （title 内 <br /> 控制两行断句，与 HTML 初始值对齐） */
 const SCENE_META = {
-  bridge: { name: "虹桥", icon: "assets/selector-bridge.png", collection: "qm" },
-  boat: { name: "帆船", icon: "assets/selector-boat.png", collection: "ch" },
-  tower: { name: "城楼", icon: "assets/selector-tower.png", collection: "tq" },
-  person: { name: "人物", icon: "assets/selector-person.png", collection: "all" }
+  bridge: {
+    name: "虹桥",
+    icon: "assets/selector-bridge.png",
+    collection: "qm",
+    eyebrow: "<strong>清明</strong>（Qīngmíng）祭祖 · 踏青",
+    title: "清明——雨落汴河，<br />虹桥撑起一城人间烟火"
+  },
+  boat: {
+    name: "帆船",
+    icon: "assets/selector-boat.png",
+    collection: "ch",
+    eyebrow: "<strong>汴河</strong>（Biàn Hé）商运 · 帆樯",
+    title: "帆船——一叶轻舟，<br />载满汴河南北的烟火"
+  },
+  tower: {
+    name: "城楼",
+    icon: "assets/selector-tower.png",
+    collection: "tq",
+    eyebrow: "<strong>汴京</strong>（Biàn Jīng）城阙 · 望楼",
+    title: "城楼——朱门高台，<br />望尽汴京一城熙攘"
+  },
+  person: {
+    name: "人物",
+    icon: "assets/selector-person.png",
+    collection: "all",
+    eyebrow: "<strong>市井</strong>（Shì Jǐng）熙攘 · 百态",
+    title: "人物——挑担叫卖，<br />最是人间烟火可人"
+  }
 };
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
@@ -741,6 +793,17 @@ const prevBtnIcon = document.getElementById("prevBtnIcon");
 const prevBtnLabel = document.getElementById("prevBtnLabel");
 const nextBtnIcon = document.getElementById("nextBtnIcon");
 const nextBtnLabel = document.getElementById("nextBtnLabel");
+/* 场景文案：左上品牌 + 左下引子（眉题/标题），随场景同步切换 */
+const brandMain = document.getElementById("brandMain");
+const sceneEyebrow = document.getElementById("sceneEyebrow");
+const sceneTitle = document.getElementById("sceneTitle");
+function applySceneCopy(id) {
+  const meta = SCENE_META[id];
+  brandMain.textContent = `清明 · ${meta.name}`;
+  sceneEyebrow.innerHTML = meta.eyebrow;
+  sceneTitle.innerHTML = meta.title;
+  sceneTitle.setAttribute("aria-label", meta.title.replace(/<br\s*\/?>/g, ""));
+}
 /* A/B 双缓冲图层：每张场景图在两层里各有一套，切换时旧层滑出、新层同时滑入 */
 const SLIDE_KEYS = ["back", "boat", "tower", "person", "front", "shadow"];
 const SLIDE_VIS = {
@@ -798,7 +861,7 @@ function updateNav() {
   document.body.dataset.scene = sceneAt(sceneIdx);
 }
 
-/* 新图走到一半时更新诗帘与按钮（每张图配自己的诗帘：qm/ch/tq/全卷） */
+/* 新图走到一半时更新诗帘、按钮与文案（每张图配自己的诗帘 qm/ch/tq/全卷 + 左上品牌 + 左下引子） */
 function swapCurtain() {
   const id = sceneAt(sceneIdx);
   document.body.dataset.scene = id;
@@ -806,6 +869,7 @@ function swapCurtain() {
   panelApi.panel.querySelector("select").value = CONFIG.collection;
   rerender();
   updateNav();
+  applySceneCopy(id);
 }
 
 async function goScene(delta) {
@@ -821,7 +885,9 @@ async function goScene(delta) {
   const dir = -delta;
   const s = Math.min(1, (vw - 24) / 720);
   const SLIDE_OUT = Math.ceil(360 + vw / (2 * s) + 60);
-  const trans = `transform ${SWAP_MS}ms ${SWAP_EASE}`;
+  /* 位移 ease-in + 透明度：旧层后段渐隐到 0，新层同步淡入 */
+  const transOut = `transform ${SWAP_MS}ms ${EASE_MOVE}, ${OUT_FADE}`;
+  const transIn = `transform ${SWAP_MS}ms ${EASE_MOVE}, ${IN_FADE}`;
   const fromS = slides[activeSlide];
   const toS = slides[1 - activeSlide];
 
@@ -831,15 +897,19 @@ async function goScene(delta) {
   fromS.el.style.transition = "none";
   toS.el.style.transition = "none";
   fromS.el.style.transform = "translateX(0px)";
+  fromS.el.style.opacity = "1";
   toS.el.style.transform = `translateX(${-SLIDE_OUT * dir}px)`;
+  toS.el.style.opacity = "0";
   toS.el.style.zIndex = 6;
 
   bottomCopy.classList.add("is-dipping");
   void toS.el.offsetWidth;
-  fromS.el.style.transition = trans;
-  toS.el.style.transition = trans;
+  fromS.el.style.transition = transOut;
+  toS.el.style.transition = transIn;
   fromS.el.style.transform = `translateX(${SLIDE_OUT * dir}px)`;
+  fromS.el.style.opacity = "0";
   toS.el.style.transform = "translateX(0px)";
+  toS.el.style.opacity = "1";
 
   await sleep(SWAP_MS * 0.5);
 
@@ -849,6 +919,7 @@ async function goScene(delta) {
 
   await sleep(SWAP_MS * 0.5);
   fromS.el.style.zIndex = "";
+  fromS.el.style.opacity = ""; /* 复位，下次作为新层时从头控制淡入 */
   /* 旧层彻底隐藏：杜绝宽屏/缩放下任何残留 */
   fromS.el.style.visibility = "hidden";
   activeSlide = 1 - activeSlide;
@@ -860,6 +931,7 @@ async function goScene(delta) {
 prevBtn.addEventListener("click", () => goScene(-1));
 nextBtn.addEventListener("click", () => goScene(1));
 updateNav();
+applySceneCopy(sceneAt(sceneIdx));
 
 /* ─── About ─── */
 const aboutModal = document.getElementById("aboutModal");

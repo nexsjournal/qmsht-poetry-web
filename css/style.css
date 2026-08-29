@@ -146,6 +146,17 @@ body[data-mode="painting"] #bgImg {
     inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
+/* 顶栏右侧按钮组：音乐（BGM 开关）+ 音律（面板） */
+.topbar__actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 音乐关闭态：降透明表示 BGM 已停 */
+.ui-btn.is-off {
+  opacity: 0.55;
+}
+
 /* ─── 场景切换钮（仿 chimes 参考站 country-btn：
    84px 手绘波浪墨线框 + 目标小图标 + 标签，hover 上移 2px）
    左右两个按钮同时常显：左=上一张、右=下一张（顺序循环，JS 按 SCENE_ORDER 更新） ─── */
@@ -486,20 +497,7 @@ body.panel-open .nav-btn--right {
   border-color: var(--brown);
 }
 
-/* ─── 滚轮提示 + 展卷进度 ─── */
-.scroll-hint {
-  position: fixed;
-  left: 50%;
-  bottom: 66px;
-  transform: translateX(-50%);
-  margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.34em;
-  color: #57493c;
-  z-index: 20;
-  pointer-events: none;
-}
-
+/* ─── 展卷进度 ─── */
 .hud {
   position: fixed;
   left: 50%;
@@ -832,8 +830,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* ─── 展画卷 / 回诗帘 模式切换 ─── */
 .area,
-.bottom-copy,
-.scroll-hint {
+.bottom-copy {
   transition:
     opacity 0.7s ease,
     transform 0.7s ease;
@@ -846,7 +843,6 @@ body[data-mode="painting"] .area {
 }
 
 body[data-mode="painting"] .bottom-copy,
-body[data-mode="painting"] .scroll-hint,
 body[data-mode="painting"] .hud {
   opacity: 0;
   pointer-events: none;

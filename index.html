@@ -28,12 +28,23 @@
     <div class="stage" id="stage">
       <header class="topbar">
         <div class="brand">
-          清明 · 虹桥
+          <span id="brandMain">清明 · 虹桥</span>
           <span class="brand__sub">Along the River during the Qingming Festival</span>
         </div>
-        <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
-          音律
-        </button>
+        <div class="topbar__actions">
+          <button
+            type="button"
+            class="ui-btn"
+            id="musicBtn"
+            aria-pressed="true"
+            aria-label="关闭背景音乐"
+          >
+            音乐
+          </button>
+          <button type="button" class="ui-btn" id="panelBtn" aria-expanded="false" aria-controls="panel">
+            音律
+          </button>
+        </div>
       </header>
 
       <!-- 左右两个切换按钮同时常显：左=上一张，右=下一张，顺序循环（JS 按 SCENE_ORDER 更新） -->
@@ -95,8 +106,8 @@
 
       <div class="bottom-copy" id="bottomCopy">
         <section class="heading" aria-label="引子">
-          <p class="eyebrow"><strong>清明</strong>（Qīngmíng）祭祖 · 踏青</p>
-          <h1 class="title" aria-label="清明——雨落汴河，虹桥撑起一城人间烟火">
+          <p class="eyebrow" id="sceneEyebrow"><strong>清明</strong>（Qīngmíng）祭祖 · 踏青</p>
+          <h1 class="title" id="sceneTitle" aria-label="清明——雨落汴河，虹桥撑起一城人间烟火">
             清明——雨落汴河，<br />虹桥撑起一城人间烟火
           </h1>
         </section>
@@ -107,8 +118,6 @@
           </button>
         </div>
       </div>
-
-      <p class="scroll-hint" aria-hidden="true">滚轮 · 横展画卷</p>
 
       <div class="hud" aria-hidden="true">
         <div class="hud__track"><div class="hud__fill" id="hudFill"></div></div>
